@@ -888,6 +888,15 @@
     font-family:'Fraunces', serif; font-weight:600; font-size:14.5px;
     margin:22px 0 12px;
   }
+  .section-label-row{
+    display:flex; align-items:baseline; justify-content:space-between; gap:10px;
+  }
+  .section-label-row .section-label{ margin:22px 0 12px; }
+  .pending-cash-link{
+    background:none; border:none; padding:0; margin:22px 0 12px;
+    font-family:'Work Sans', sans-serif; font-size:11.5px; font-weight:600;
+    color:var(--cherry); text-decoration:underline; cursor:pointer; white-space:nowrap;
+  }
 
   .payment-method{ display:flex; gap:14px; }
   .pm-option{
@@ -977,6 +986,14 @@
     flex:none; width:100%; max-width:290px;
     background:var(--paper); border-radius:20px; padding:26px 20px;
     box-shadow:0 24px 50px -18px rgba(43,27,18,0.55);
+    position:relative;
+  }
+  .success-close-btn{
+    position:absolute; top:10px; right:10px;
+    width:26px; height:26px; border-radius:50%;
+    background:rgba(43,27,18,0.06); border:none;
+    display:flex; align-items:center; justify-content:center;
+    font-size:14px; color:var(--muted); cursor:pointer; line-height:1;
   }
   .success-body{ flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:30px; }
   .success-icon{
@@ -1650,7 +1667,10 @@
       </div>
 
       <div id="completePayment">
-        <div class="section-label" data-i18n="Selesaikan Pembayaran">Selesaikan Pembayaran</div>
+        <div class="section-label-row">
+          <div class="section-label" data-i18n="Selesaikan Pembayaran">Selesaikan Pembayaran</div>
+          <button type="button" id="pendingCashLink" class="pending-cash-link" hidden data-i18n="Ada QR yang belum selesai?">Ada QR yang belum selesai?</button>
+        </div>
         <div class="pay-panel">
           <div class="qris-row">
             <span class="qris-icon">▦</span>
@@ -1721,6 +1741,7 @@
   <!-- ===== SUCCESS VIEW ===== -->
   <div class="view-page" id="viewSuccess" hidden>
     <div class="success-body">
+      <button class="success-close-btn" id="closeSuccessBtn" type="button" aria-label="Tutup">✕</button>
       <div class="success-icon" id="successIcon" hidden>✓</div>
       <h2 id="successTitle" data-i18n="Pesanan Diterima" hidden>Pesanan Diterima</h2>
       <p id="successDesc" data-i18n="Terima kasih! Kopi dan camilanmu sedang diseduh & disiapkan barista. Ambil nomor antrianmu di meja." hidden>Terima kasih! Kopi dan camilanmu sedang diseduh &amp; disiapkan barista. Ambil nomor antrianmu di meja.</p>
@@ -1972,6 +1993,16 @@ const I18N = {
     "en": "Complete Payment",
     "ar": "إتمام الدفع",
     "ja": "支払いを完了する"
+  },
+  "Ada QR yang belum selesai?": {
+    "en": "Have an unfinished QR?",
+    "ar": "هل لديك رمز QR غير مكتمل؟",
+    "ja": "未完了のQRがありますか？"
+  },
+  "Tidak ada pesanan yang belum selesai": {
+    "en": "No unfinished order found",
+    "ar": "لا يوجد طلب غير مكتمل",
+    "ja": "未完了の注文はありません"
   },
   "Saya setuju dengan": {
     "en": "I agree to the",
@@ -3886,6 +3917,7 @@ function openCheckout(){
   selectPaymentMethod('online');
   $('#agreeTerms').checked = false;
   updatePayButtonState();
+  updatePendingCashLink();
 }
 function orderedProductsForDisplay(){
   // Ambil daftar produk unik yang benar-benar ada di keranjang, sesuai pesanan
@@ -4071,6 +4103,45 @@ function selectPaymentMethod(pm){
 $('#pmOnline').addEventListener('click', ()=> selectPaymentMethod('online'));
 $('#pmCashier').addEventListener('click', ()=> selectPaymentMethod('cashier'));
 $('#agreeTerms').addEventListener('change', updatePayButtonState);
+
+/* Cari pesanan "Bayar di Kasir" yang sudah dibuat tapi BELUM di-scan/diterima
+   kasir (status 'awaiting_scan'). Dipakai oleh tautan kecil "Ada QR yang
+   belum selesai?" di halaman checkout — lihat pendingCashLink. */
+function findPendingCashOrder(){
+  return orders.find(o=> o.status === 'awaiting_scan') || null;
+}
+
+/* Tampilkan lagi halaman "Menunggu Dikonfirmasi Kasir" + QR untuk sebuah
+   pesanan yang masih pending — dipakai oleh tautan "Ada QR yang belum
+   selesai?" maupun pemulihan otomatis saat init(). */
+function showPendingCashOrderView(order){
+  $('#viewCheckout').hidden = true;
+  $('#queueNo').textContent = order.queueNo;
+  currentQueueNo = order.queueNo;
+  currentSuccessOrderId = order.id;
+  renderOrderQr(order);
+  applySuccessStatus('awaiting');
+  $('#viewSuccess').hidden = false;
+}
+
+/* Tampilkan/sembunyikan tautan kecil merah "Ada QR yang belum selesai?" di
+   sebelah judul "Selesaikan Pembayaran" — cuma muncul kalau memang ada
+   pesanan "Bayar di Kasir" lama yang belum di-scan kasir. */
+function updatePendingCashLink(){
+  const link = $('#pendingCashLink');
+  if(!link) return;
+  link.hidden = !findPendingCashOrder();
+}
+
+$('#pendingCashLink').addEventListener('click', ()=>{
+  const pending = findPendingCashOrder();
+  if(pending){
+    showPendingCashOrderView(pending);
+  } else {
+    showToast(tt('Tidak ada pesanan yang belum selesai'));
+    updatePendingCashLink();
+  }
+});
 
 function updatePayButtonState(){
   const needsAgree = paymentMethod === 'online';
@@ -4326,6 +4397,11 @@ function finalizeOrderSuccess(opts){
   // autoAdvanceFromQrisIfConfirmed.
   const showSuccessView = !opts || opts.showSuccessView !== false;
   persistCustomer();
+  // PENTING: rincian pesanan (item + total) HARUS diambil dari keranjang
+  // SEBELUM keranjang dikosongkan di bawah — dulu urutannya terbalik, jadi
+  // cartTotal() dihitung dari keranjang yang sudah kosong dan QR pesanan
+  // selalu menampilkan "Total Rp0".
+  const order = pushOrderToKasir(nextQueueNo());
   // Keranjang dikosongkan begitu pesanan berhasil dibuat (dulu ini menunggu
   // tombol "Kembali"/"Saya Sudah Bayar" ditekan pembeli — sekarang otomatis,
   // karena halaman sukses/menunggu berpindah status sendiri tanpa aksi manual).
@@ -4333,11 +4409,12 @@ function finalizeOrderSuccess(opts){
   cart = [];
   renderCartBar();
   persistCart();
-  const queueNo = nextQueueNo();
-  $('#queueNo').textContent = queueNo;
-  currentQueueNo = queueNo;
+  // Menu diambar ulang supaya stepper qty menu yang barusan dipesan kembali
+  // ke 0/"Tambah" — lihat renderMenu().
+  renderMenu();
+  $('#queueNo').textContent = order.queueNo;
+  currentQueueNo = order.queueNo;
   if(showSuccessView) $('#viewSuccess').hidden = false;
-  const order = pushOrderToKasir(queueNo);
   currentSuccessOrderId = order.id;
   if(order.status === 'awaiting_scan'){
     // Bayar di Kasir: tampilkan QR pesanan + status menunggu, dan simpan
@@ -4358,7 +4435,7 @@ function finalizeOrderSuccess(opts){
     if(showSuccessView) applySuccessStatus('confirmed');
     storageSet('pendingOrderId', '');
   }
-  saveOrderToHistory(queueNo);
+  saveOrderToHistory(order.queueNo);
   requestNotificationPermission();
   // "Panaskan" daftar suara text-to-speech browser dari sekarang, supaya nanti saat
   // notifikasi "pesanan siap" muncul, suaranya sudah siap & langsung terdengar (tidak diam di percobaan pertama).
@@ -4946,6 +5023,10 @@ if(orderChannel){
       // Kalau pembeli masih di halaman QRIS (belum pindah), otomatis lanjutkan
       // ke halaman sukses — ini yang menggantikan tombol "Saya Sudah Bayar".
       if(o) autoAdvanceFromQrisIfConfirmed(o);
+      // Kalau pembeli sedang di halaman checkout saat pesanan lamanya baru
+      // saja dikonfirmasi kasir, tautan "Ada QR yang belum selesai?" otomatis
+      // hilang tanpa perlu reload.
+      if(!$('#viewCheckout').hidden) updatePendingCashLink();
     } else if(msg.type === 'order-done'){
       // Sinkronkan status lokal juga, untuk browser tab lain yang membuka Halaman Kasir
       const o = orders.find(x=> x.queueNo === msg.queueNo);
@@ -5100,6 +5181,14 @@ $('#qrisSaveBtn').addEventListener('click', (e)=>{
 $('#backFromQris').addEventListener('click', ()=>{
   clearInterval(qrisTimer);
   $('#viewQris').hidden = true;
+});
+/* Tombol ✕ di halaman sukses/QR pesanan: hanya MENYEMBUNYIKAN popup-nya,
+   TIDAK menghapus status "menunggu di-scan" (pendingOrderId tetap tersimpan).
+   Jadi kalau halaman ini dibuka/dimuat ulang lagi dan pesanan masih belum
+   di-scan kasir, popup ini otomatis muncul lagi sendiri — lihat pemulihan
+   pendingOrderId di init(). */
+$('#closeSuccessBtn').addEventListener('click', ()=>{
+  $('#viewSuccess').hidden = true;
 });
 $('#qrisRefreshBtn').addEventListener('click', ()=>{
   startQrisCountdown();
