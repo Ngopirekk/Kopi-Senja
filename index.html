@@ -256,7 +256,11 @@
     box-shadow:0 14px 30px -10px rgba(156,43,61,0.65);
     cursor:pointer; z-index:20;
   }
-  .basket{ position:relative; font-size:19px; }
+  .basket{
+    position:relative; font-size:19px; background:none; border:none; padding:4px;
+    margin:-4px; border-radius:10px; cursor:pointer; color:inherit; line-height:1;
+  }
+  .basket:active{ background:rgba(255,255,255,0.18); }
   .badge{
     position:absolute; top:-8px; right:-10px; background:var(--cream); color:var(--cherry);
     font-size:10px; font-weight:800; border-radius:50%; width:17px; height:17px;
@@ -290,6 +294,18 @@
   .sheet-scroll h2{ font-family:'Fraunces', serif; font-size:19px; margin:0 0 4px; }
   .sheet-scroll .sprice{ font-family:'JetBrains Mono', monospace; font-weight:700; color:var(--cherry); font-size:14.5px; }
   .sheet-scroll .sdesc{ font-size:12.5px; color:var(--muted); margin-top:6px; line-height:1.5; }
+
+  .mini-cart-sheet{ max-height:80%; }
+  .mini-cart-head{
+    flex:none; display:flex; align-items:center; justify-content:space-between;
+    padding:18px 18px 8px; font-family:'Fraunces', serif; font-weight:600; font-size:16px;
+  }
+  .mini-cart-head .close{
+    width:30px; height:30px; border-radius:50%; border:none; background:var(--cream);
+    font-size:14px; cursor:pointer; color:var(--espresso);
+  }
+  .mini-cart-scroll{ padding-top:4px; padding-bottom:6px; }
+  .mini-cart-empty{ text-align:center; color:var(--muted); font-size:12.5px; padding:30px 10px; }
 
   .group{ margin-top:20px; padding-bottom:16px; border-bottom:1px solid var(--line); }
   .group-head{ display:flex; align-items:center; justify-content:space-between; }
@@ -1194,11 +1210,31 @@
   </div>
 
   <!-- ===== CART BAR ===== -->
-  <button class="cart-bar" id="cartBar" hidden>
-    <span class="basket">🧺<span class="badge" id="cartCount">0</span></span>
+  <div class="cart-bar" id="cartBar" role="button" tabindex="0" hidden>
+    <button type="button" class="basket" id="cartBasketBtn">🧺<span class="badge" id="cartCount">0</span></button>
     <span class="cart-total"><small data-i18n="Total">Total</small><b id="cartTotal">Rp0</b></span>
     <span class="checkout-label" data-i18n="Lanjut Bayar →">Lanjut Bayar →</span>
-  </button>
+  </div>
+
+  <!-- ===== MINI KERANJANG (buka cepat dari ikon keranjang, bisa hapus pesanan di sini) ===== -->
+  <div class="sheet-overlay" id="miniCartOverlay" hidden>
+    <div class="sheet mini-cart-sheet">
+      <div class="mini-cart-head">
+        <span data-i18n="Keranjang">Keranjang</span>
+        <button class="close" id="closeMiniCart" type="button">✕</button>
+      </div>
+      <div class="sheet-scroll mini-cart-scroll" id="miniCartLines"></div>
+      <div class="sheet-footer">
+        <div class="total-order-row">
+          <span class="t" data-i18n="Total Bayar">Total Bayar</span>
+          <b id="miniCartTotal">Rp0</b>
+        </div>
+        <button class="cta" id="miniCartCheckoutBtn" type="button">
+          <span data-i18n="Lanjut Bayar">Lanjut Bayar</span> <span>→</span>
+        </button>
+      </div>
+    </div>
+  </div>
 
   <!-- ===== PANEL PENCARIAN MENU ===== -->
   <div class="view-page" id="viewSearch" hidden>
@@ -1848,6 +1884,21 @@ const I18N = {
     "en": "Continue to Pay →",
     "ar": "متابعة الدفع ←",
     "ja": "支払いへ進む →"
+  },
+  "Lanjut Bayar": {
+    "en": "Continue to Pay",
+    "ar": "متابعة الدفع",
+    "ja": "支払いへ進む"
+  },
+  "Keranjang": {
+    "en": "Cart",
+    "ar": "السلة",
+    "ja": "カート"
+  },
+  "Keranjang kosong": {
+    "en": "Cart is empty",
+    "ar": "السلة فارغة",
+    "ja": "カートは空です"
   },
   "Cari kopi, camilan, paket...": {
     "en": "Search coffee, snacks, sets...",
@@ -3892,6 +3943,7 @@ function renderCartBar(){
   bar.hidden = false;
   $('#cartCount').textContent = cartQty();
   $('#cartTotal').textContent = rupiah(cartTotal());
+  if(!$('#miniCartOverlay').hidden) renderMiniCart();
 }
 
 /* ===================== TOAST ===================== */
@@ -3988,6 +4040,50 @@ function renderSummary(){
   wireSwipeToDelete();
 }
 
+/* ===================== MINI KERANJANG ==================
+   Panel cepat yang dibuka lewat ikon 🧺 di cart-bar, tanpa harus masuk ke
+   halaman checkout penuh dulu — supaya pembeli bisa cek & hapus pesanan
+   langsung dari sini. Struktur barisnya sengaja disamakan persis dengan
+   #summaryLines (swipe-wrap + swipe-delete-btn) supaya bisa pakai ulang
+   wireSwipeToDelete() & removeCartLine() yang sama. */
+function renderMiniCart(){
+  const box = $('#miniCartLines');
+  $('#miniCartTotal').textContent = rupiah(cartTotal());
+  if(cart.length===0){
+    box.innerHTML = `<div class="mini-cart-empty">${tt('Keranjang kosong')}</div>`;
+    return;
+  }
+  box.innerHTML = cart.map(i=>`
+    <div class="swipe-wrap" data-cartid="${i.cartId}">
+      <div class="swipe-delete-bg"><button class="swipe-delete-btn" data-cartid="${i.cartId}">🗑</button></div>
+      <div class="summary-line" data-cartid="${i.cartId}">
+        <div><div class="l1">${i.qty}x ${tt(i.name)}</div>${i.summary?`<div class="l2">${i.summary}</div>`:''}${i.notes?`<div class="l2">${tt('Catatan')}: ${i.notes}</div>`:''}</div>
+        <div class="r">${rupiah(i.lineTotal)}</div>
+      </div>
+    </div>`).join('');
+  wireSwipeToDelete();
+}
+function openMiniCart(){
+  if(cart.length===0) return;
+  renderMiniCart();
+  $('#miniCartOverlay').hidden = false;
+}
+function closeMiniCart(){
+  $('#miniCartOverlay').hidden = true;
+}
+$('#cartBasketBtn').addEventListener('click', (e)=>{
+  e.stopPropagation(); // jangan sampai ikut memicu klik #cartBar (buka checkout penuh)
+  openMiniCart();
+});
+$('#closeMiniCart').addEventListener('click', closeMiniCart);
+$('#miniCartOverlay').addEventListener('click', (e)=>{
+  if(e.target.id === 'miniCartOverlay') closeMiniCart(); // tap area gelap di luar sheet → tutup
+});
+$('#miniCartCheckoutBtn').addEventListener('click', ()=>{
+  closeMiniCart();
+  openCheckout();
+});
+
 function removeCartLine(cartId){
   const idx = cart.findIndex(i=> String(i.cartId)===String(cartId));
   if(idx===-1) return;
@@ -3997,13 +4093,21 @@ function removeCartLine(cartId){
   renderCartBar();
   if(removed.isQuick && removed.productId) refreshQtyControl(removed.productId);
   if(cart.length===0){
-    // Kalau keranjang kosong, tutup halaman pembayaran dan kembali ke menu
+    // Kalau keranjang kosong, tutup halaman pembayaran & mini keranjang, balik ke menu
     $('#viewCheckout').hidden = true;
+    closeMiniCart();
     showToast(tt('Pesanan dihapus') + ' — ' + tt('keranjang kosong'));
   } else {
-    renderSummary();
-    renderRelatedMenu();
-    $('#payTotal').textContent = rupiah(cartTotal());
+    // Segarkan yang mana pun sedang terbuka — bisa jadi checkout penuh,
+    // bisa jadi mini keranjang, atau malah dua-duanya (jarang, tapi aman).
+    if(!$('#viewCheckout').hidden){
+      renderSummary();
+      renderRelatedMenu();
+      $('#payTotal').textContent = rupiah(cartTotal());
+    }
+    if(!$('#miniCartOverlay').hidden){
+      renderMiniCart();
+    }
     showToast(tt('Pesanan dihapus'));
   }
 }
@@ -4080,6 +4184,9 @@ function wireSwipeToDelete(){
 }
 
 $('#cartBar').addEventListener('click', openCheckout);
+$('#cartBar').addEventListener('keydown', (e)=>{
+  if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); openCheckout(); }
+});
 $('#backFromCheckout').addEventListener('click', ()=> $('#viewCheckout').hidden = true );
 
 $('#typeDineIn').addEventListener('click', ()=>{
@@ -4743,22 +4850,35 @@ function startQrCameraScanner(){
     return;
   }
   html5QrScanner = new Html5Qrcode('scanReader', {
-    // Manfaatkan BarcodeDetector bawaan browser kalau didukung (Chrome/Android) —
-    // jauh lebih cepat & akurat dibanding decoder JS murni, terutama untuk QR padat.
-    useBarCodeDetectorIfSupported: true,
+    // CATATAN: BarcodeDetector bawaan browser (useBarCodeDetectorIfSupported)
+    // ternyata di beberapa Android/WebView malah lebih SULIT membaca QR padat
+    // dari jarak dekat (sering gagal fokus/deteksi dibanding decoder JS bawaan
+    // pustaka ini) — makanya sekarang dimatikan supaya perilaku pemindaian
+    // konsisten sama bagusnya di semua perangkat, bukan tergantung dukungan
+    // API tiap browser.
+    useBarCodeDetectorIfSupported: false,
     verbose: false,
   });
   const scanConfig = {
     fps: 15,
     qrbox: computeQrBox,
-    aspectRatio: 1.0,
     disableFlip: false,
     // Minta resolusi kamera yang cukup tinggi — kamera resolusi rendah kesulitan
     // membaca QR padat (banyak modul kecil) dari jarak tangan memegang HP.
+    // CATATAN: aspectRatio TIDAK lagi dipaksa 1:1 — memaksa rasio persegi bikin
+    // sebagian browser HP men-crop/nge-zoom gambar kamera secara digital demi
+    // memenuhi rasio itu, yang malah bikin gambar QR jadi kurang tajam & susah
+    // fokus. Membiarkan kamera pakai rasio aslinya menghasilkan gambar paling
+    // tajam yang tersedia dari sensornya.
     videoConstraints: {
       facingMode: scannerFacingMode,
       width: { ideal: 1920 },
       height: { ideal: 1080 },
+      // Minta browser aktifkan autofokus terus-menerus kalau didukung — tanpa
+      // ini, sebagian HP mengunci fokus di jarak jauh sejak awal video dibuka,
+      // sehingga QR yang dipegang dekat ke kamera selalu terlihat blur/buram
+      // walau kamera sendiri sebenarnya sanggup fokus dekat.
+      advanced: [{ focusMode: 'continuous' }],
     },
   };
   const onSuccess = (decodedText)=>{
