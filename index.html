@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Kopi Senja — Pesan di Meja</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700;9..144,900&family=Work+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700;9..144,900&family=Work+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&family=Playfair+Display:wght@700;800&family=Poppins:wght@500;600;700&family=Pacifico&family=Caveat:wght@600;700&display=swap" rel="stylesheet">
 <!-- Google Identity Services (Sign In With Google) — resmi dari Google, dipakai untuk login Google asli -->
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <!-- Pembuat QR Code (untuk QR pesanan pembeli) & pembaca QR Code lewat kamera (untuk halaman Kasir) -->
@@ -656,14 +656,26 @@
   /* ---------- PENGATURAN: GANTI FOTO/VIDEO TAMPILAN DEPAN ---------- */
   .hero-media-custom{
     width:64px; height:64px; border-radius:50%; object-fit:cover; display:block;
-    box-shadow:0 6px 14px -4px rgba(0,0,0,0.5); border:2px solid rgba(246,236,218,0.35);
+    margin:0 auto; box-shadow:0 6px 14px -4px rgba(0,0,0,0.5); border:2px solid rgba(246,236,218,0.35);
+    transition:transform .12s ease;
   }
+  /* Khusus video: ukuran menyesuaikan sendiri mengikuti proporsi video-nya
+     (tidak dipaksa jadi lingkaran kecil 64px seperti foto), tapi tetap
+     dibatasi supaya tidak terlalu besar, dan tetap posisinya di tengah. */
+  .hero-media-custom.hero-media-video{
+    width:auto; height:auto; max-width:180px; max-height:120px;
+    border-radius:14px; object-fit:contain;
+  }
+  .cup-wrap{ transition:transform .12s ease; }
   .settings-hero-preview{
     background:linear-gradient(155deg, #3A2416 0%, var(--espresso) 55%, #1C1108 100%);
     border-radius:16px; padding:24px; display:flex; align-items:center; justify-content:center;
-    margin-bottom:16px;
+    margin-bottom:16px; overflow:hidden; min-height:168px;
   }
   .settings-hero-preview .hero-media-custom{ width:120px; height:120px; }
+  .settings-hero-preview .hero-media-custom.hero-media-video{
+    width:auto; height:auto; max-width:230px; max-height:150px;
+  }
   .settings-hero-actions{ display:flex; flex-direction:row; gap:6px; }
   .settings-media-btn{
     flex:1; display:flex; align-items:center; justify-content:center; gap:4px;
@@ -673,6 +685,33 @@
   .settings-media-reset-btn{
     flex:1; padding:7px 8px; border-radius:8px; border:1.5px solid var(--line); background:#fff;
     color:var(--muted); font-weight:700; font-size:10px; cursor:pointer;
+  }
+
+  /* ---------- PENGATURAN: TEKS & FONT NAMA TOKO ---------- */
+  .brand-text-field{ margin-top:10px; }
+  .brand-text-field label{
+    display:block; font-size:11px; font-weight:600; color:var(--espresso-2); margin-bottom:5px;
+  }
+  .brand-text-input{
+    width:100%; padding:9px 11px; border-radius:10px; border:1.5px solid var(--line);
+    background:#fff; color:var(--espresso); font-family:'Work Sans', sans-serif;
+    font-size:13.5px; font-weight:500;
+  }
+  .brand-font-select{
+    width:100%; padding:9px 11px; border-radius:10px; border:1.5px solid var(--line);
+    background:#fff; color:var(--espresso); font-size:13.5px; font-weight:500; cursor:pointer;
+  }
+  .brand-size-row{
+    display:flex; align-items:center; gap:10px; margin-top:4px;
+  }
+  .brand-size-row input[type="range"]{ flex:1; accent-color:var(--amber); }
+  .brand-size-value{
+    flex:none; font-family:'JetBrains Mono', monospace; font-size:11.5px; font-weight:700;
+    color:var(--cherry); min-width:40px; text-align:right;
+  }
+  .brand-reset-btn{
+    margin-top:12px; width:100%; padding:8px 8px; border-radius:8px; border:1.5px solid var(--line);
+    background:#fff; color:var(--muted); font-weight:700; font-size:11px; cursor:pointer;
   }
 
   /* ---------- PENGATURAN: KUSTOMISASI WARNA WEBSITE ---------- */
@@ -1117,8 +1156,8 @@
             <span class="cup-emoji">☕</span>
           </div>
         </div>
-        <h1>Kopi Senja</h1>
-        <p data-i18n="NGOPI SANTAI, CERITA BERLANJUT">NGOPI SANTAI, CERITA BERLANJUT</p>
+        <h1 id="heroBrandTitle">Kopi Senja</h1>
+        <p id="heroBrandTagline">NGOPI SANTAI, CERITA BERLANJUT</p>
       </div>
       <div class="bean-row">· · ·</div>
     </header>
@@ -1192,7 +1231,7 @@
       <h3 data-i18n="Pengaturan">Pengaturan</h3>
     </div>
     <div class="page-body">
-      <div class="kasir-hint" data-i18n="Ganti foto atau video yang tampil di bagian atas halaman depan (menggantikan ikon cangkir kopi). Gunakan file berukuran kecil supaya cepat dimuat.">Ganti foto atau video yang tampil di bagian atas halaman depan (menggantikan ikon cangkir kopi). Gunakan file berukuran kecil supaya cepat dimuat.</div>
+      <div class="kasir-hint" data-i18n="Ganti foto atau video yang tampil di bagian atas halaman depan (menggantikan ikon cangkir kopi). Gunakan file berukuran kecil supaya cepat dimuat. Ukuran dan posisinya juga bisa diatur sendiri di bawah ini.">Ganti foto atau video yang tampil di bagian atas halaman depan (menggantikan ikon cangkir kopi). Gunakan file berukuran kecil supaya cepat dimuat. Ukuran dan posisinya juga bisa diatur sendiri di bawah ini.</div>
 
       <div class="settings-hero-preview" id="settingsHeroPreview"></div>
 
@@ -1202,6 +1241,70 @@
 
         <button type="button" class="settings-media-reset-btn" id="settingsResetHeroBtn" data-i18n="Kembalikan ke Ikon Bawaan">Kembalikan ke Ikon Bawaan</button>
       </div>
+
+      <div class="brand-text-field">
+        <label for="heroSizeRange" data-i18n="Ukuran Gambar/Video">Ukuran Gambar/Video</label>
+        <div class="brand-size-row">
+          <input type="range" id="heroSizeRange" min="50" max="220" step="5" value="100">
+          <span class="brand-size-value" id="heroSizeValue">100%</span>
+        </div>
+      </div>
+
+      <div class="brand-text-field">
+        <label for="heroPosXRange" data-i18n="Posisi Kiri ⟷ Kanan">Posisi Kiri ⟷ Kanan</label>
+        <div class="brand-size-row">
+          <input type="range" id="heroPosXRange" min="-60" max="60" step="2" value="0">
+          <span class="brand-size-value" id="heroPosXValue">0px</span>
+        </div>
+      </div>
+
+      <div class="brand-text-field">
+        <label for="heroPosYRange" data-i18n="Posisi Atas ⟷ Bawah">Posisi Atas ⟷ Bawah</label>
+        <div class="brand-size-row">
+          <input type="range" id="heroPosYRange" min="-60" max="60" step="2" value="0">
+          <span class="brand-size-value" id="heroPosYValue">0px</span>
+        </div>
+      </div>
+
+      <button type="button" class="brand-reset-btn" id="settingsResetHeroTransformBtn" data-i18n="Kembalikan Ukuran &amp; Posisi Bawaan">Kembalikan Ukuran &amp; Posisi Bawaan</button>
+
+      <div class="settings-section-title">🔤 <span data-i18n="Teks &amp; Font Nama Toko">Teks &amp; Font Nama Toko</span></div>
+      <div class="kasir-hint" data-i18n="Ubah tulisan &quot;Kopi Senja&quot; dan slogan &quot;NGOPI SANTAI, CERITA BERLANJUT&quot; di bawah foto/video tampilan depan, ganti jenis font-nya, dan atur besar-kecil ukurannya.">Ubah tulisan "Kopi Senja" dan slogan "NGOPI SANTAI, CERITA BERLANJUT" di bawah foto/video tampilan depan, ganti jenis font-nya, dan atur besar-kecil ukurannya.</div>
+
+      <div class="brand-text-field">
+        <label for="brandTextInput" data-i18n="Tulisan Nama Toko">Tulisan Nama Toko</label>
+        <input type="text" id="brandTextInput" class="brand-text-input" maxlength="30" placeholder="Kopi Senja">
+      </div>
+
+      <div class="brand-text-field">
+        <label for="brandTaglineInput" data-i18n="Tulisan Slogan (di bawah nama toko)">Tulisan Slogan (di bawah nama toko)</label>
+        <input type="text" id="brandTaglineInput" class="brand-text-input" maxlength="60" placeholder="NGOPI SANTAI, CERITA BERLANJUT">
+      </div>
+
+      <div class="brand-text-field">
+        <label for="brandFontSelect" data-i18n="Jenis Font">Jenis Font</label>
+        <select id="brandFontSelect" class="brand-font-select">
+          <option value="Fraunces">Fraunces (bawaan)</option>
+          <option value="Work Sans">Work Sans</option>
+          <option value="Playfair Display">Playfair Display</option>
+          <option value="Poppins">Poppins</option>
+          <option value="Pacifico">Pacifico</option>
+          <option value="Caveat">Caveat</option>
+          <option value="JetBrains Mono">JetBrains Mono</option>
+          <option value="Georgia, serif">Georgia (bawaan HP/laptop)</option>
+          <option value="Arial, sans-serif">Arial (bawaan HP/laptop)</option>
+        </select>
+      </div>
+
+      <div class="brand-text-field">
+        <label for="brandSizeRange" data-i18n="Ukuran Tulisan">Ukuran Tulisan</label>
+        <div class="brand-size-row">
+          <input type="range" id="brandSizeRange" min="18" max="48" step="1" value="30">
+          <span class="brand-size-value" id="brandSizeValue">30px</span>
+        </div>
+      </div>
+
+      <button type="button" class="brand-reset-btn" id="settingsResetBrandBtn" data-i18n="Kembalikan Tulisan ke Bawaan">Kembalikan Tulisan ke Bawaan</button>
 
       <div class="settings-section-title">🎨 <span data-i18n="Warna Tampilan Website">Warna Tampilan Website</span></div>
       <div class="kasir-hint" data-i18n="Atur sendiri warna latar belakang, warna teks, dan warna aksen website — bebas pilih warna apa saja. Perubahan langsung terlihat di seluruh halaman.">Atur sendiri warna latar belakang, warna teks, dan warna aksen website — bebas pilih warna apa saja. Perubahan langsung terlihat di seluruh halaman.</div>
@@ -1352,11 +1455,15 @@
       <div class="kasir-subtabs">
         <button class="kasir-subtab active" id="kasirTabOrders" type="button" data-i18n="Pesanan Masuk">Pesanan Masuk</button>
         <button class="kasir-subtab" id="kasirTabMenu" type="button" data-i18n="Kelola Menu">Kelola Menu</button>
-        <button class="kasir-subtab" id="kasirTabHours" type="button" data-i18n="Jam Operasional">Jam Operasional</button>
       </div>
       <div id="kasirOrdersPane">
         <div class="kasir-hint" id="kasirWelcomeHint" data-i18n="Pesanan baru dari pembeli otomatis muncul di sini. Tekan Selesai kalau pesanan sudah siap diambil.">Pesanan baru dari pembeli otomatis muncul di sini. Tekan Selesai kalau pesanan sudah siap diambil.</div>
         <button type="button" class="scan-order-btn" id="openScanBtn">📷 <span data-i18n="Scan QR Pesanan">Scan QR Pesanan</span><span class="badge-count" id="awaitingScanCount" hidden>0</span></button>
+        <div id="kasirPaymentVerifySection" hidden>
+          <div class="section-label" data-i18n="Verifikasi Pembayaran Online">Verifikasi Pembayaran Online</div>
+          <div class="kasir-hint" data-i18n="Cek dulu di aplikasi DANA/e-wallet kasir apakah dana sudah benar-benar masuk, baru tekan Konfirmasi. Pesanan TIDAK masuk dapur sebelum dikonfirmasi di sini.">Cek dulu di aplikasi DANA/e-wallet kasir apakah dana sudah benar-benar masuk, baru tekan Konfirmasi. Pesanan TIDAK masuk dapur sebelum dikonfirmasi di sini.</div>
+          <div id="kasirPaymentVerifyBody"></div>
+        </div>
         <div id="kasirOrdersBody"></div>
       </div>
       <div id="kasirMenuPane" hidden>
@@ -1384,25 +1491,6 @@
 
         <input type="text" class="kasir-menu-search" id="kasirMenuSearch" placeholder="Cari nama menu..." data-i18n-placeholder="Cari nama menu...">
         <div id="kasirMenuBody"></div>
-      </div>
-      <div id="kasirHoursPane" hidden>
-        <div class="kasir-hint" data-i18n="Atur jam buka-tutup warung dan status buka/tutup saat ini. Perubahan langsung terlihat di halaman depan pembeli.">Atur jam buka-tutup warung dan status buka/tutup saat ini. Perubahan langsung terlihat di halaman depan pembeli.</div>
-
-        <div class="kasir-hours-status-card">
-          <div>
-            <div class="khs-label" data-i18n="Status warung saat ini">Status warung saat ini</div>
-            <div class="khs-value" id="kasirShopStatusText">Buka</div>
-          </div>
-          <button type="button" class="kasir-toggle-open-btn" id="kasirToggleOpenBtn">Tutup Warung</button>
-        </div>
-
-        <div class="kasir-add-form">
-          <label data-i18n="Jam Buka">Jam Buka</label>
-          <input type="time" id="kasirOpenTimeInput">
-          <label data-i18n="Jam Tutup">Jam Tutup</label>
-          <input type="time" id="kasirCloseTimeInput">
-          <button type="button" class="kasir-save-hours-btn" id="kasirSaveHoursBtn" data-i18n="Simpan Jam Operasional">Simpan Jam Operasional</button>
-        </div>
       </div>
     </div>
   </div>
@@ -1462,7 +1550,33 @@
       <button id="backFromHours">←</button>
       <h3 data-i18n="Jam Operasional">Jam Operasional</h3>
     </div>
-    <div class="page-body" id="hoursBody"></div>
+    <div class="page-body">
+      <div id="hoursBody"></div>
+
+      <!-- Hanya tampak kalau sedang login sebagai Kasir. Kalau belum/tidak login
+           kasir, blok ini otomatis tersembunyi (lihat syncHoursKasirEditVisibility()
+           di JS) — pembeli biasa sama sekali tidak melihat atau bisa mengaksesnya. -->
+      <div id="hoursKasirEditPane" hidden>
+        <div class="settings-section-title">🔐 <span data-i18n="Atur Jam Operasional (Kasir)">Atur Jam Operasional (Kasir)</span></div>
+        <div class="kasir-hint" data-i18n="Atur jam buka-tutup warung dan status buka/tutup saat ini. Perubahan langsung terlihat di halaman depan pembeli.">Atur jam buka-tutup warung dan status buka/tutup saat ini. Perubahan langsung terlihat di halaman depan pembeli.</div>
+
+        <div class="kasir-hours-status-card">
+          <div>
+            <div class="khs-label" data-i18n="Status warung saat ini">Status warung saat ini</div>
+            <div class="khs-value" id="kasirShopStatusText">Buka</div>
+          </div>
+          <button type="button" class="kasir-toggle-open-btn" id="kasirToggleOpenBtn">Tutup Warung</button>
+        </div>
+
+        <div class="kasir-add-form">
+          <label data-i18n="Jam Buka">Jam Buka</label>
+          <input type="time" id="kasirOpenTimeInput">
+          <label data-i18n="Jam Tutup">Jam Tutup</label>
+          <input type="time" id="kasirCloseTimeInput">
+          <button type="button" class="kasir-save-hours-btn" id="kasirSaveHoursBtn" data-i18n="Simpan Jam Operasional">Simpan Jam Operasional</button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- ===== ITEM SHEET ===== -->
@@ -1497,7 +1611,7 @@
         <span class="err" data-i18n="Nama wajib diisi">Nama wajib diisi</span>
       </div>
       <div class="field" id="fieldPhone">
-        <label data-i18n="Nomor HP">Nomor HP</label>
+        <label data-i18n="Nomor HP (WhatsApp)">Nomor HP (WhatsApp)</label>
         <input type="text" id="inputPhone" placeholder="08xx xxxx xxxx">
         <span class="err" data-i18n="Nomor HP harus diawali 08 atau 62">Nomor HP harus diawali 08 atau 62</span>
       </div>
@@ -1594,12 +1708,12 @@
         <button id="qrisRefreshBtn" data-i18n="Perbarui QRIS">Perbarui QRIS</button>
       </div>
 
-      <p class="qris-hint" data-i18n="Scan QRIS ini pakai aplikasi e-wallet atau m-banking kamu. Sistem akan otomatis mendeteksi begitu pembayaran berhasil.">Scan QRIS ini pakai aplikasi e-wallet atau m-banking kamu. Sistem akan otomatis mendeteksi begitu pembayaran berhasil.</p>
+      <p class="qris-hint" data-i18n="Scan QRIS ini pakai aplikasi e-wallet atau m-banking kamu, lalu selesaikan pembayarannya di sana. Halaman ini otomatis lanjut begitu kasir mengonfirmasi dana diterima — tidak perlu menekan apa pun.">Scan QRIS ini pakai aplikasi e-wallet atau m-banking kamu, lalu selesaikan pembayarannya di sana. Halaman ini otomatis lanjut begitu kasir mengonfirmasi dana diterima — tidak perlu menekan apa pun.</p>
     </div>
     <div class="pay-footer">
-      <div class="qris-waiting" id="qrisWaiting">
+      <div class="qris-waiting" id="qrisWaiting" hidden>
         <span class="qris-waiting-dot"></span>
-        <span data-i18n="Menunggu pembayaran... sistem akan otomatis lanjut setelah QRIS terbayar">Menunggu pembayaran... sistem akan otomatis lanjut setelah QRIS terbayar</span>
+        <span data-i18n="Menunggu verifikasi kasir... pesanan baru masuk dapur setelah kasir mengonfirmasi pembayaran diterima">Menunggu verifikasi kasir... pesanan baru masuk dapur setelah kasir mengonfirmasi pembayaran diterima</span>
       </div>
     </div>
   </div>
@@ -1622,7 +1736,6 @@
         <span data-i18n="Menunggu di-scan kasir... halaman ini otomatis lanjut begitu di-scan">Menunggu di-scan kasir... halaman ini otomatis lanjut begitu di-scan</span>
       </div>
       <p class="wa-hint" id="sentToKasirHint" hidden>Kode ini berisi rincian pesanan &amp; totalnya. Simpan halaman ini — kode tidak akan hilang sampai kasir men-scan dan menerima pesananmu.</p>
-      <button class="again-btn" id="againBtn" data-i18n="Kembali">Kembali</button>
     </div>
   </div>
 
@@ -1825,10 +1938,10 @@ const I18N = {
     "ar": "الاسم مطلوب",
     "ja": "氏名は必須です"
   },
-  "Nomor HP": {
-    "en": "Phone Number",
-    "ar": "رقم الهاتف",
-    "ja": "電話番号"
+  "Nomor HP (WhatsApp)": {
+    "en": "Phone Number (WhatsApp)",
+    "ar": "رقم الهاتف (واتساب)",
+    "ja": "電話番号（WhatsApp）"
   },
   "Kirim Struk ke Email": {
     "en": "Send Receipt to Email",
@@ -3050,7 +3163,10 @@ if(menuChannel){
       shopOpenTime = msg.shopOpenTime || shopOpenTime;
       shopCloseTime = msg.shopCloseTime || shopCloseTime;
       renderInfoCardStatus();
-      if(!$('#viewKasir').hidden && !$('#kasirHoursPane').hidden) renderKasirHoursPane();
+      renderMenu();
+      renderCartBar();
+      if(activeProduct) renderSheet();
+      if(!$('#viewHours').hidden) syncHoursKasirEditVisibility();
       return;
     }
     if(msg.type === 'hero-media-updated'){
@@ -3059,10 +3175,22 @@ if(menuChannel){
       renderHeroMedia();
       return;
     }
+    if(msg.type === 'hero-media-style-updated'){
+      heroMediaStyle = { ...DEFAULT_HERO_TRANSFORM, ...(msg.heroMediaStyle || {}) };
+      applyHeroMediaTransform();
+      syncHeroTransformInputsUI();
+      return;
+    }
     if(msg.type === 'theme-updated'){
       themeColors = { ...DEFAULT_THEME, ...(msg.themeColors || {}) };
       applyThemeColors(themeColors);
       syncThemeInputsUI(themeColors);
+      return;
+    }
+    if(msg.type === 'brand-style-updated'){
+      brandStyle = { ...DEFAULT_BRAND, ...(msg.brandStyle || {}) };
+      applyBrandStyle();
+      syncBrandInputsUI();
       return;
     }
     if(msg.type !== 'menu-updated') return;
@@ -3083,7 +3211,7 @@ window.addEventListener('storage', (e)=>{
   if(e.key === (LS_PREFIX + 'shopOpen') || e.key === (LS_PREFIX + 'shopOpenTime') || e.key === (LS_PREFIX + 'shopCloseTime')){
     storageGet('shopOpen').then(v=>{ if(v!==null && v!==undefined) shopOpen = v === '1'; });
     storageGet('shopOpenTime').then(v=>{ if(v) shopOpenTime = v; });
-    storageGet('shopCloseTime').then(v=>{ if(v) shopCloseTime = v; renderInfoCardStatus(); if(!$('#viewKasir').hidden && !$('#kasirHoursPane').hidden) renderKasirHoursPane(); });
+    storageGet('shopCloseTime').then(v=>{ if(v) shopCloseTime = v; renderInfoCardStatus(); renderMenu(); renderCartBar(); if(activeProduct) renderSheet(); if(!$('#viewHours').hidden) syncHoursKasirEditVisibility(); });
     return;
   }
   if(e.key === (LS_PREFIX + 'heroMediaType') || e.key === (LS_PREFIX + 'heroMediaData')){
@@ -3094,11 +3222,27 @@ window.addEventListener('storage', (e)=>{
     });
     return;
   }
+  if(e.key === (LS_PREFIX + 'heroMediaStyle') && e.newValue){
+    try{
+      heroMediaStyle = { ...DEFAULT_HERO_TRANSFORM, ...JSON.parse(e.newValue) };
+      applyHeroMediaTransform();
+      syncHeroTransformInputsUI();
+    }catch(err){}
+    return;
+  }
   if(e.key === (LS_PREFIX + 'themeColors') && e.newValue){
     try{
       themeColors = { ...DEFAULT_THEME, ...JSON.parse(e.newValue) };
       applyThemeColors(themeColors);
       syncThemeInputsUI(themeColors);
+    }catch(err){}
+    return;
+  }
+  if(e.key === (LS_PREFIX + 'brandStyle') && e.newValue){
+    try{
+      brandStyle = { ...DEFAULT_BRAND, ...JSON.parse(e.newValue) };
+      applyBrandStyle();
+      syncBrandInputsUI();
     }catch(err){}
     return;
   }
@@ -3312,6 +3456,12 @@ function quickQtyFor(productId){
 }
 function qtyControlHTML(p){
   const qty = quickQtyFor(p.id);
+  // Warung tutup → jangan tampilkan tombol tambah/stepper sama sekali, cuma
+  // label "Tutup" yang non-aktif. Menu tetap bisa dilihat-lihat seperti biasa,
+  // cuma tidak bisa memesan apa pun sampai warung dibuka lagi.
+  if(!shopOpen){
+    return `<button class="add-btn" disabled>${tt('Tutup')}</button>`;
+  }
   if(p.soldOut && qty === 0){
     return `<button class="add-btn" disabled>${tt('Habis')}</button>`;
   }
@@ -3331,6 +3481,7 @@ function refreshQtyControl(productId){
   els.forEach(el=> el.innerHTML = qtyControlHTML(p));
 }
 function quickAdd(productId){
+  if(!shopOpen){ showToast(tt('Warung sedang tutup, belum bisa menerima pesanan')); return; }
   const product = PRODUCTS.find(p=>p.id===productId);
   if(product.soldOut){ showToast(`${tt(product.name)} ${tt('sedang habis')}`); refreshQtyControl(productId); return; }
   let line = cart.find(i=>i.isQuick && i.productId===productId);
@@ -3559,7 +3710,7 @@ function selectionSummary(){ return computeSummary(activeProduct, groupState); }
 function renderSheet(){
   const p = activeProduct;
   const unit = p.price + unitExtra();
-  const valid = allGroupsValid() && !p.soldOut;
+  const valid = shopOpen && allGroupsValid() && !p.soldOut;
 
   const groupsHTML = p.groups.map((g,gi)=>{
     const filled = groupFilled(gi);
@@ -3618,7 +3769,7 @@ function renderSheet(){
         </div>
       </div>
       <button class="cta" id="addOrderBtn" ${valid?'':'disabled'}>
-        <span>${p.soldOut ? tt('Menu sedang habis') : (valid? tt('Tambah Pesanan') : tt('Lengkapi pilihan di atas'))}</span>
+        <span>${!shopOpen ? tt('Warung sedang tutup') : (p.soldOut ? tt('Menu sedang habis') : (valid? tt('Tambah Pesanan') : tt('Lengkapi pilihan di atas')))}</span>
         <span class="amt">${rupiah(unit*outerQty)}</span>
       </button>
     </div>
@@ -3670,6 +3821,7 @@ function renderSheet(){
 }
 
 function addToCart(){
+  if(!shopOpen){ showToast(tt('Warung sedang tutup, belum bisa menerima pesanan')); return; }
   const p = activeProduct;
   const unit = p.price + unitExtra();
   const notesVal = $('#notesInput').value.trim();
@@ -3705,7 +3857,7 @@ function cartTotal(){ return cart.reduce((s,i)=>s+i.lineTotal,0); }
 function cartQty(){ return cart.reduce((s,i)=>s+i.qty,0); }
 function renderCartBar(){
   const bar = $('#cartBar');
-  if(cart.length===0){ bar.hidden = true; return; }
+  if(cart.length===0 || !shopOpen){ bar.hidden = true; return; }
   bar.hidden = false;
   $('#cartCount').textContent = cartQty();
   $('#cartTotal').textContent = rupiah(cartTotal());
@@ -3726,6 +3878,7 @@ let orderType = 'Makan di Tempat';
 let paymentMethod = 'online';
 
 function openCheckout(){
+  if(!shopOpen){ showToast(tt('Warung sedang tutup, belum bisa menerima pesanan')); return; }
   renderSummary();
   renderRelatedMenu();
   $('#payTotal').textContent = rupiah(cartTotal());
@@ -3933,17 +4086,30 @@ $('#inputTable').addEventListener('click', ()=>{
 $('#promoRow').addEventListener('click', ()=> showToast(tt('Fitur promo & voucher segera hadir')));
 
 /* ===================== KIRIM PESANAN KE HALAMAN KASIR =====================
-   Alurnya sekarang:
-   1. Saat checkout selesai, pesanan dibuat dengan status 'awaiting_scan' —
-      BELUM masuk ke antrean dapur yang terlihat kasir.
-   2. Pembeli melihat QR unik (isinya order.id, beda setiap pesanan) di
-      halaman sukses.
-   3. Kasir buka "Scan QR Pesanan" di Halaman Kasir, arahkan kamera ke QR
-      pembeli (atau ketik manual kode/nomor antriannya). Begitu cocok,
-      status pesanan berubah jadi 'pending' dan baru saat itu muncul di
-      antrean "Pesanan Masuk".
-   Data disimpan lewat storageSet + disiarkan lewat BroadcastChannel supaya
-   tab/halaman Kasir yang terbuka di browser yang sama langsung ter-update.
+   Alurnya sekarang mendeteksi status "sudah discan" secara otomatis untuk
+   KEDUA metode pembayaran:
+
+   A) Bayar di Kasir → status awal 'awaiting_scan'.
+   B) Bayar Online (QRIS) → status awal 'awaiting_payment_verification'.
+
+   Kedua jenis pesanan SAMA-SAMA mendapat QR unik (isinya referensi ke
+   order.id, beda tiap pesanan) di halaman sukses pembeli. Kasir cukup buka
+   SATU tombol "Scan QR Pesanan" di Halaman Kasir untuk kedua kasus:
+   - Kalau QR yang discan berstatus 'awaiting_scan' → pesanan sah, langsung
+     jadi 'pending' dan masuk antrean dapur.
+   - Kalau QR yang discan berstatus 'awaiting_payment_verification' → scan
+     dipakai sebagai jalan pintas konfirmasi ganti tombol manual "Konfirmasi
+     Pembayaran Diterima" (kasir tetap wajib mengecek dulu dana benar-benar
+     masuk di aplikasi DANA/e-wallet SEBELUM men-scan). Tombol manualnya
+     tetap ada di daftar "Belum Diverifikasi" untuk jaga-jaga kalau pembeli
+     sudah pergi / kamera tidak bisa dipakai.
+   - Kode yang sama/sudah pernah dikonfirmasi otomatis ditolak kalau discan
+     ulang (lihat confirmOrderByCode), jadi tidak bisa dipakai dua kali.
+
+   Data disimpan lewat storageSet + disiarkan lewat BroadcastChannel (dengan
+   fallback event 'storage' untuk browser yang tidak mendukungnya) supaya
+   tab/halaman Kasir & halaman sukses pembeli yang terbuka di browser yang
+   sama langsung ter-update tanpa reload, untuk kedua metode pembayaran.
    CATATAN: BroadcastChannel & localStorage hanya bekerja dalam SATU browser/
    perangkat yang sama. Untuk sinkron nyata antar 2 HP berbeda (HP pembeli vs
    tablet kasir discan dari HP lain), sistem ini butuh server/backend
@@ -3965,10 +4131,12 @@ function pushOrderToKasir(queueNo){
     total: cartTotal(),
     customerName: $('#inputName').value.trim(),
     customerPhone: $('#inputPhone').value.trim(),
-    // Pesanan QRIS/online sudah otomatis 'pending' (langsung masuk antrean dapur) karena
-    // pembayarannya sendiri sudah jadi bukti konfirmasi — tidak perlu discan lagi oleh kasir.
+    // Pesanan "Bayar Online" (QRIS) TIDAK langsung 'pending' — baru masuk antrean
+    // dapur SETELAH kasir mengonfirmasi dana QRIS benar-benar diterima (lihat
+    // renderKasirPaymentVerify & confirmPaymentReceived). Ini mencegah pesanan
+    // "lolos" walau pembayaran online-nya sebenarnya gagal/belum masuk.
     // Pesanan "Bayar di Kasir" baru 'pending' SETELAH kasir men-scan QR pesanan pembeli.
-    status: paymentMethod === 'online' ? 'pending' : 'awaiting_scan',
+    status: paymentMethod === 'online' ? 'awaiting_payment_verification' : 'awaiting_scan',
     createdAt: Date.now(),
   };
   orders.unshift(order);
@@ -3995,26 +4163,38 @@ function qrSafeText(str){
     .replace(/[^\x00-\x7E\n]/g, '');      // buang sisa karakter non-ASCII (emoji, dll.)
 }
 
-/* Susun teks lengkap isi pesanan (menu + total) yang dimasukkan ke dalam QR.
-   Dibuat sebagai teks biasa (bukan cuma ID) supaya kalau pembeli/kasir scan
-   pakai APLIKASI PEMBACA QR APAPUN (bukan cuma scanner bawaan web ini),
-   tetap langsung terbaca isi pesanan & totalnya — tidak perlu lookup ke
-   database. Baris "ID:" tetap disertakan di baris pertama supaya scanner
-   BAWAAN halaman Kasir bisa otomatis mencocokkan ke pesanan yang tersimpan. */
+/* Awalan tetap yang menandai QR ini sebagai kode pesanan Kopi Senja. Catatan
+   jujur: QR code adalah standar terbuka — TIDAK ADA cara bikin QR yang secara
+   teknis hanya bisa "dibaca kamera" oleh satu aplikasi tertentu, aplikasi
+   pembaca QR apa pun tetap bisa mendekode data mentahnya. Yang bisa kita
+   lakukan (dan sudah dilakukan di sini) supaya QR ini PRAKTIS tidak berguna
+   di luar fitur "Scan QR Pesanan" milik kasir:
+   1. Isinya tidak lagi teks pesanan yang bisa langsung dibaca manusia — cuma
+      berupa kode acak (base64) yang tidak bermakna apa pun kalau dibuka
+      pakai aplikasi scanner biasa.
+   2. Kode itu cuma REFERENSI ke pesanan yang tersimpan di penyimpanan lokal
+      HP/browser kasir — tanpa data pesanan tersimpan di situ (mis. dibuka di
+      HP lain), kode ini tidak bisa dipakai untuk apa pun.
+   3. Setiap pesanan hanya bisa dikonfirmasi SEKALI (lihat confirmOrderByCode) —
+      scan ulang kode yang sama setelah dikonfirmasi akan ditolak. */
+const ORDER_QR_PREFIX = 'KSNJ1:';
+function encodeOrderQrPayload(order){
+  const payload = JSON.stringify({ id: order.id, q: order.queueNo });
+  let b64;
+  try{ b64 = btoa(payload); }catch(e){ b64 = payload; }
+  return ORDER_QR_PREFIX + b64;
+}
+function decodeOrderQrPayload(text){
+  const raw = String(text || '').trim();
+  if(!raw.startsWith(ORDER_QR_PREFIX)) return null;
+  const b64 = raw.slice(ORDER_QR_PREFIX.length);
+  try{
+    const payload = JSON.parse(atob(b64));
+    return payload && payload.id ? payload : null;
+  }catch(e){ return null; }
+}
 function buildOrderQrText(order){
-  const lines = [];
-  lines.push(`ID:${order.id}`);
-  lines.push(`KOPI SENJA - Antrian ${order.queueNo}`);
-  lines.push(`Meja ${order.tableNumber} - ${order.orderType}`);
-  lines.push('------------------------');
-  order.items.forEach(i=>{
-    lines.push(`${i.qty}x ${i.name}${i.summary ? ' ('+i.summary+')' : ''}`);
-    if(i.notes) lines.push(`  Catatan: ${i.notes}`);
-  });
-  lines.push('------------------------');
-  lines.push(`TOTAL: ${rupiah(order.total)}`);
-  lines.push(`Bayar: ${order.paymentMethod==='online' ? 'QRIS' : 'Bayar di Kasir'}`);
-  return qrSafeText(lines.join('\n'));
+  return qrSafeText(encodeOrderQrPayload(order));
 }
 
 /* Gambar QR unik untuk pesanan ini di halaman sukses. Isinya rincian pesanan
@@ -4055,8 +4235,9 @@ function renderOrderQr(order){
   const textEl = $('#orderQrCodeText');
   if(textEl) textEl.textContent = order.queueNo;
 
-  // Hanya total yang ditampilkan langsung di halaman (di bawah QR) — rincian
-  // menu tetap ada di dalam isi QR itu sendiri untuk kasir.
+  // QR sekarang cuma berisi kode referensi acak (lihat encodeOrderQrPayload),
+  // jadi rincian pesanan (total) ditampilkan terpisah di halaman ini untuk
+  // pembeli — bukan di dalam QR-nya.
   const summaryEl = $('#orderQrSummary');
   if(summaryEl){
     summaryEl.innerHTML = `
@@ -4100,20 +4281,36 @@ function applySuccessStatus(state){
   const desc = $('#successDesc');
   const hint = $('#sentToKasirHint');
   const waitBadge = $('#scanWaitingBadge');
+  const qrBox = $('.order-qr-box');
   // Ikon, judul, deskripsi, hint, dan badge menunggu sengaja disembunyikan permanen —
   // halaman sukses hanya menampilkan nomor antrian, QR, dan ringkasan pesanan.
   if(state === 'awaiting'){
+    // Bayar di Kasir: belum discan kasir — tampilkan QR untuk ditunjukkan ke kasir.
     icon.textContent = '⏳';
     icon.classList.add('waiting');
     title.textContent = tt('Menunggu Dikonfirmasi Kasir');
     desc.textContent = tt('Pesananmu sudah dibuat. Tunjukkan QR di bawah ke kasir untuk mulai diproses.');
-    hint.textContent = tt('Kode ini berisi rincian pesanan & totalnya. Halaman ini otomatis lanjut begitu kasir men-scan QR-nya.');
+    hint.textContent = tt('Kode ini referensi khusus pesananmu untuk kasir. Halaman ini otomatis lanjut begitu kasir men-scan QR-nya.');
+    if(qrBox) qrBox.hidden = false;
+  } else if(state === 'awaiting_payment'){
+    // Bayar Online (QRIS): sudah ditekan "Saya Sudah Bayar" tapi kasir BELUM
+    // mengonfirmasi dana benar-benar diterima. QR pesanan tetap ditampilkan
+    // (sama seperti alur Bayar di Kasir) supaya kasir bisa langsung men-scan-nya
+    // sebagai jalan pintas konfirmasi setelah mengecek dana masuk — lihat
+    // confirmOrderByCode yang sekarang menerima kode dari status ini juga.
+    icon.textContent = '⏳';
+    icon.classList.add('waiting');
+    title.textContent = tt('Menunggu Verifikasi Pembayaran');
+    desc.textContent = tt('Terima kasih! Kasir sedang memeriksa pembayaran QRIS-mu. Pesanan baru masuk ke antrean dapur setelah pembayaran dikonfirmasi diterima.');
+    hint.textContent = tt('Tunjukkan QR di bawah ke kasir untuk mempercepat konfirmasi. Halaman ini otomatis lanjut begitu kasir mengonfirmasi pembayaranmu diterima.');
+    if(qrBox) qrBox.hidden = false;
   } else {
     icon.textContent = '✓';
     icon.classList.remove('waiting');
     title.textContent = tt('Pesanan Diterima');
     desc.textContent = tt('Terima kasih! Kopi dan camilanmu sedang diseduh & disiapkan barista. Ambil nomor antrianmu di meja.');
     hint.textContent = tt('Pesanan sudah diterima kasir dan masuk ke antrean dapur. Kamu akan mendapat notifikasi begitu pesanan siap diambil.');
+    if(qrBox) qrBox.hidden = true;
   }
   icon.hidden = true;
   title.hidden = true;
@@ -4122,24 +4319,43 @@ function applySuccessStatus(state){
   waitBadge.hidden = true;
 }
 
-function finalizeOrderSuccess(){
+function finalizeOrderSuccess(opts){
+  // opts.showSuccessView === false → dipakai oleh alur QRIS baru: pesanan
+  // dibuat & disimpan seperti biasa, tapi halaman #viewSuccess TIDAK langsung
+  // ditampilkan (halaman QRIS yang tetap terlihat) — lihat openQrisPage &
+  // autoAdvanceFromQrisIfConfirmed.
+  const showSuccessView = !opts || opts.showSuccessView !== false;
   persistCustomer();
+  // Keranjang dikosongkan begitu pesanan berhasil dibuat (dulu ini menunggu
+  // tombol "Kembali"/"Saya Sudah Bayar" ditekan pembeli — sekarang otomatis,
+  // karena halaman sukses/menunggu berpindah status sendiri tanpa aksi manual).
+  // Nama, HP, email, dan nomor meja SENGAJA tidak dihapus supaya tidak perlu diisi ulang tiap pesan.
+  cart = [];
+  renderCartBar();
+  persistCart();
   const queueNo = nextQueueNo();
   $('#queueNo').textContent = queueNo;
   currentQueueNo = queueNo;
-  $('#viewSuccess').hidden = false;
+  if(showSuccessView) $('#viewSuccess').hidden = false;
   const order = pushOrderToKasir(queueNo);
   currentSuccessOrderId = order.id;
-  renderOrderQr(order);
   if(order.status === 'awaiting_scan'){
-    // Bayar di Kasir: tampilkan status menunggu, dan simpan pendingOrderId supaya
-    // kalau halaman ini ditutup/dimuat ulang SEBELUM kasir sempat scan, QR-nya
-    // bisa ditampilkan lagi persis sama — lihat pemulihan di init().
-    applySuccessStatus('awaiting');
+    // Bayar di Kasir: tampilkan QR pesanan + status menunggu, dan simpan
+    // pendingOrderId supaya kalau halaman ini ditutup/dimuat ulang SEBELUM kasir
+    // sempat scan, QR-nya bisa ditampilkan lagi persis sama — lihat pemulihan di init().
+    renderOrderQr(order);
+    if(showSuccessView) applySuccessStatus('awaiting');
+    storageSet('pendingOrderId', order.id);
+  } else if(order.status === 'awaiting_payment_verification'){
+    // Bayar Online (QRIS): tetap gambar QR pesanan — bisa discan kasir sebagai
+    // jalan pintas konfirmasi (lihat confirmOrderByCode), selain jalur manual
+    // tombol "Konfirmasi Pembayaran Diterima" yang tetap tersedia di Halaman Kasir.
+    renderOrderQr(order);
+    if(showSuccessView) applySuccessStatus('awaiting_payment');
     storageSet('pendingOrderId', order.id);
   } else {
-    // QRIS/online: pembayaran sudah jadi bukti konfirmasi, langsung tampilkan status diterima.
-    applySuccessStatus('confirmed');
+    renderOrderQr(order);
+    if(showSuccessView) applySuccessStatus('confirmed');
     storageSet('pendingOrderId', '');
   }
   saveOrderToHistory(queueNo);
@@ -4147,6 +4363,7 @@ function finalizeOrderSuccess(){
   // "Panaskan" daftar suara text-to-speech browser dari sekarang, supaya nanti saat
   // notifikasi "pesanan siap" muncul, suaranya sudah siap & langsung terdengar (tidak diam di percobaan pertama).
   try{ if('speechSynthesis' in window) window.speechSynthesis.getVoices(); }catch(e){}
+  return order;
 }
 
 /* Hapus pendingOrderId dari storage HANYA kalau ID yang cocok/sudah discan
@@ -4187,26 +4404,20 @@ function showKasirOrdersPage(){
   $('#viewKasir').hidden = false;
 }
 
-/* ---- Subtab Halaman Kasir: "Pesanan Masuk" vs "Kelola Menu" vs "Jam Operasional" ---- */
+/* ---- Subtab Halaman Kasir: "Pesanan Masuk" vs "Kelola Menu" ---- */
 function switchKasirSubtab(which){
   $('#kasirTabOrders').classList.toggle('active', which==='orders');
   $('#kasirTabMenu').classList.toggle('active', which==='menu');
-  $('#kasirTabHours').classList.toggle('active', which==='hours');
   $('#kasirOrdersPane').hidden = which!=='orders';
   $('#kasirMenuPane').hidden = which!=='menu';
-  $('#kasirHoursPane').hidden = which!=='hours';
   if(which==='menu'){
     renderKasirMenuManage($('#kasirMenuSearch').value);
     renderKasirCatManage();
     populateAddMenuCategorySelect();
   }
-  if(which==='hours'){
-    renderKasirHoursPane();
-  }
 }
 $('#kasirTabOrders').addEventListener('click', ()=> switchKasirSubtab('orders'));
 $('#kasirTabMenu').addEventListener('click', ()=> switchKasirSubtab('menu'));
-$('#kasirTabHours').addEventListener('click', ()=> switchKasirSubtab('hours'));
 $('#kasirMenuSearch').addEventListener('input', (e)=> renderKasirMenuManage(e.target.value));
 $('#kasirLoginBtn').addEventListener('click', ()=>{
   const name = $('#kasirNameInput').value.trim();
@@ -4239,14 +4450,17 @@ $('#kasirLogoutBtn').addEventListener('click', ()=>{
   userRole = 'pembeli';
   storageSet('userRole', userRole);
   $('#viewKasir').hidden = true;
+  syncHoursKasirEditVisibility();
   showToast(tt('Berhasil keluar dari Kasir'));
 });
 function renderKasirOrders(){
   const body = $('#kasirOrdersBody');
   updateAwaitingScanBadge();
-  // Pesanan berstatus 'awaiting_scan' sengaja DISEMBUNYIKAN dari antrean dapur —
-  // baru muncul di sini setelah kasir men-scan QR-nya (lihat confirmOrderByCode).
-  const visibleOrders = orders.filter(o => o.status !== 'awaiting_scan');
+  renderKasirPaymentVerify();
+  // Pesanan berstatus 'awaiting_scan' (Bayar di Kasir, belum discan) DAN
+  // 'awaiting_payment_verification' (Bayar Online, belum dikonfirmasi kasir)
+  // sengaja DISEMBUNYIKAN dari antrean dapur sampai masing-masing dikonfirmasi.
+  const visibleOrders = orders.filter(o => o.status !== 'awaiting_scan' && o.status !== 'awaiting_payment_verification');
   if(visibleOrders.length === 0){
     body.innerHTML = `<div class="kasir-empty">${tt('Belum ada pesanan masuk. Tekan "Scan QR Pesanan" untuk menerima pesanan dari pembeli.')}</div>`;
     return;
@@ -4275,6 +4489,56 @@ function renderKasirOrders(){
     btn.addEventListener('click', ()=> deleteOrder(btn.dataset.id));
   });
 }
+/* Daftar pesanan "Bayar Online" (QRIS) yang pembelinya sudah menekan "Saya
+   Sudah Bayar" tapi kasir BELUM mengonfirmasi dana benar-benar diterima.
+   Pesanan ini SENGAJA tidak masuk antrean dapur (lihat filter di
+   renderKasirOrders) — supaya kalau pembayaran QRIS pembeli sebenarnya gagal/
+   belum masuk, kasir bisa menahan pesanan itu alih-alih memprosesnya begitu saja. */
+function renderKasirPaymentVerify(){
+  const section = $('#kasirPaymentVerifySection');
+  const body = $('#kasirPaymentVerifyBody');
+  if(!section || !body) return;
+  const pending = orders.filter(o => o.status === 'awaiting_payment_verification');
+  section.hidden = pending.length === 0;
+  if(pending.length === 0){ body.innerHTML = ''; return; }
+  body.innerHTML = pending.map(o=>{
+    const itemsHtml = o.items.map(i=> `${i.qty}x ${tt(i.name)}${i.summary ? ' — '+i.summary : ''}`).join('<br>');
+    const jam = new Date(o.createdAt).toLocaleTimeString('id-ID', {hour:'2-digit', minute:'2-digit'});
+    return `
+    <div class="kasir-order-card">
+      <div class="kasir-order-head">
+        <b>${o.queueNo}</b>
+        <span>${jam}</span>
+        <span class="kasir-order-status awaiting_scan">${tt('Belum Diverifikasi')}</span>
+        <button class="kasir-delete-btn" data-id="${o.id}" aria-label="${tt('Hapus pesanan ini')}">🗑</button>
+      </div>
+      <div class="kasir-order-meta">${tt('Meja')} ${o.tableNumber} · ${tt(o.orderType)} · QRIS${o.customerName ? ' · '+o.customerName : ''}</div>
+      <div class="kasir-order-items">${itemsHtml}</div>
+      <div class="kasir-order-total"><span>${tt('Total')}</span><b>${rupiah(o.total)}</b></div>
+      <button class="kasir-done-btn confirm-payment-btn" data-id="${o.id}">${tt('Konfirmasi Pembayaran Diterima')}</button>
+      <button class="kasir-delete-btn reject-payment-btn" data-id="${o.id}" style="width:100%; margin-top:6px; border-radius:10px; padding:8px;" data-i18n="Tolak / Belum Bayar">${tt('Tolak / Belum Bayar')}</button>
+    </div>`;
+  }).join('');
+  body.querySelectorAll('.confirm-payment-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=> confirmPaymentReceived(btn.dataset.id));
+  });
+  body.querySelectorAll('.reject-payment-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=> deleteOrder(btn.dataset.id));
+  });
+}
+/* Kasir menekan ini SETELAH benar-benar mengecek mutasi/notifikasi di aplikasi
+   DANA/e-wallet kasir bahwa dana pesanan ini sudah masuk. Baru di sinilah
+   pesanan online dianggap lunas dan dipindahkan ke antrean dapur. */
+function confirmPaymentReceived(orderId){
+  const order = orders.find(o=> o.id === orderId);
+  if(!order || order.status !== 'awaiting_payment_verification') return;
+  order.status = 'pending';
+  persistOrders();
+  clearPendingOrderIdIfMatches(order.id);
+  if(orderChannel) orderChannel.postMessage({ type:'order-confirmed', orderId: order.id });
+  renderKasirOrders();
+  showToast(`${tt('Pesanan')} ${order.queueNo} ${tt('diterima & masuk antrean dapur')}`);
+}
 function deleteOrder(orderId){
   const idx = orders.findIndex(o=> o.id === orderId);
   if(idx === -1) return;
@@ -4283,6 +4547,34 @@ function deleteOrder(orderId){
   renderKasirOrders();
   if(orderChannel) orderChannel.postMessage({ type:'order-deleted', orderId });
   showToast(tt('Pesanan dihapus'));
+}
+/* Ubah berbagai format nomor HP Indonesia (08xx, +62xx, 62xx, spasi/strip)
+   jadi format internasional polos yang dipakai wa.me (62xxxxxxxxxx).
+   Mengembalikan null kalau nomornya kosong/tidak terlihat valid, supaya
+   kita tidak membuka tab WhatsApp kosong/rusak. */
+function normalizePhoneToWa(raw){
+  if(!raw) return null;
+  let digits = String(raw).trim().replace(/[^\d+]/g, '');
+  if(digits.startsWith('+')) digits = digits.slice(1);
+  if(digits.startsWith('0')) digits = '62' + digits.slice(1);
+  else if(digits.startsWith('8')) digits = '62' + digits; // pembeli kadang ketik tanpa 0 di depan
+  if(!/^62\d{8,13}$/.test(digits)) return null;
+  return digits;
+}
+/* Buka WhatsApp dengan pesan "pesanan siap diambil" yang sudah terisi otomatis
+   ke nomor pembeli, supaya kasir tinggal menekan tombol "Kirim" di WhatsApp.
+   PENTING: window.open ini harus tetap berjalan SINKRON di dalam alur klik
+   tombol "Tandai Selesai" (tidak boleh lewat setTimeout/await) — kalau tidak,
+   browser akan menganggapnya bukan lagi bagian dari gestur pengguna dan
+   memblokirnya sebagai popup.
+   Nomor WA dikirim ke wa.me — sebuah layanan resmi milik WhatsApp/Meta yang
+   dipakai untuk membuka percakapan dengan pesan yang sudah diisi. */
+function openWhatsAppOrderReady(order){
+  const waNumber = normalizePhoneToWa(order.customerPhone);
+  if(!waNumber) return; // pembeli tidak isi nomor WA / nomornya tidak valid — lewati
+  const namaSapaan = order.customerName ? order.customerName + ', ' : '';
+  const pesan = `Halo ${namaSapaan}pesananmu di Kopi Senja dengan nomor antrian *${order.queueNo}* sudah *selesai* dan siap diambil ya! ☕😊`;
+  window.open('https://wa.me/' + waNumber + '?text=' + encodeURIComponent(pesan), '_blank');
 }
 function markOrderDone(orderId){
   const order = orders.find(o=> o.id === orderId);
@@ -4296,6 +4588,10 @@ function markOrderDone(orderId){
   // tidak mengirim pesan balik ke pengirimnya sendiri, jadi tanpa baris ini
   // notifikasi "pesanan siap" tidak akan pernah muncul di sisi Pembeli.
   handleOrderDoneNotice(order.queueNo);
+  // Notifikasi kedua: buka WhatsApp ke nomor pembeli (kalau diisi) dengan
+  // pesan "pesanan siap diambil" yang sudah terisi otomatis — kasir tinggal
+  // tap "Kirim" satu kali. Dijalankan bersamaan dengan notifikasi HP di atas.
+  openWhatsAppOrderReady(order);
   showToast(tt('Pesanan ditandai selesai'));
 }
 
@@ -4309,11 +4605,16 @@ let html5QrScanner = null;
 let scannerIsRunning = false;
 let scannerFacingMode = 'environment'; // 'environment' = kamera belakang, 'user' = kamera depan
 let torchOn = false;
+let scanProcessing = false; // true sesaat setelah 1 QR berhasil terbaca, sampai kamera benar-benar ditutup
 
 function updateAwaitingScanBadge(){
   const el = $('#awaitingScanCount');
   if(!el) return;
-  const count = orders.filter(o=> o.status === 'awaiting_scan').length;
+  // Dihitung dari KEDUA status "belum dikonfirmasi": 'awaiting_scan' (Bayar di
+  // Kasir) DAN 'awaiting_payment_verification' (Bayar Online) — sebab tombol
+  // "Scan QR Pesanan" sekarang bisa mengonfirmasi QR dari kedua jenis pesanan
+  // itu sekaligus (lihat confirmOrderByCode).
+  const count = orders.filter(o=> o.status === 'awaiting_scan' || o.status === 'awaiting_payment_verification').length;
   el.textContent = String(count);
   el.hidden = count === 0;
 }
@@ -4323,10 +4624,12 @@ function openScanOverlay(){
   $('#scanManualInput').value = '';
   scannerFacingMode = 'environment';
   torchOn = false;
+  scanProcessing = false;
   startQrCameraScanner();
 }
 function closeScanOverlay(){
   $('#scanOverlay').hidden = true;
+  scanProcessing = false;
   stopQrCameraScanner();
 }
 $('#openScanBtn').addEventListener('click', openScanOverlay);
@@ -4381,7 +4684,16 @@ function startQrCameraScanner(){
       height: { ideal: 1080 },
     },
   };
-  const onSuccess = (decodedText)=>{ confirmOrderByCode(decodedText); };
+  const onSuccess = (decodedText)=>{
+    // Begitu SATU QR berhasil terbaca, langsung jeda kamera saat itu juga —
+    // supaya frame berikutnya (yang mungkin masih sempat diproses sepersekian
+    // detik kemudian) tidak memicu pembacaan/konfirmasi ganda sebelum overlay
+    // benar-benar tertutup.
+    if(scanProcessing) return;
+    scanProcessing = true;
+    try{ if(html5QrScanner && scannerIsRunning) html5QrScanner.pause(true); }catch(e){}
+    confirmOrderByCode(decodedText);
+  };
   const onFail = ()=>{ /* satu frame tanpa QR terbaca — normal, terus coba frame berikutnya */ };
 
   // Cara utama: minta langsung lewat facingMode (paling andal lintas perangkat,
@@ -4453,6 +4765,14 @@ function stopQrCameraScanner(){
   }
 }
 
+/* Lanjutkan lagi pemindaian kamera yang sempat dijeda (lihat onSuccess) kalau
+   ternyata kode yang terbaca bukan pesanan yang valid — supaya kasir tidak
+   perlu tutup-buka ulang overlay hanya karena sekali salah scan. */
+function resumeScannerIfPaused(){
+  scanProcessing = false;
+  try{ if(html5QrScanner && scannerIsRunning) html5QrScanner.resume(); }catch(e){}
+}
+
 $('#scanManualBtn').addEventListener('click', ()=>{
   const val = $('#scanManualInput').value.trim();
   if(val) confirmOrderByCode(val);
@@ -4466,32 +4786,56 @@ $('#scanManualInput').addEventListener('keydown', (e)=>{
    pertama "ID:xxx" — fungsi ini mengambil ID dari baris itu. Kalau yang
    diketik/discan cuma satu baris pendek (mis. input manual "A-02" atau
    "ord_xxx"), teks itu dipakai apa adanya dan dicocokkan lewat order.id
-   ATAU queueNo (nomor antrian, supaya kasir gampang ketik manual). */
+   ATAU queueNo (nomor antrian, supaya kasir gampang ketik manual). QR yang
+   dibuat aplikasi ini sendiri (lihat encodeOrderQrPayload) dibongkar dulu
+   lewat decodeOrderQrPayload — hasil scan kode acak semacam itu TIDAK akan
+   cocok apa pun kalau dibuka dari luar aplikasi ini. */
 function extractOrderIdFromScan(text){
   const raw = String(text || '').trim();
+  const decoded = decodeOrderQrPayload(raw);
+  if(decoded) return decoded.id;
   const match = raw.match(/ID:\s*(\S+)/i);
   return match ? match[1] : raw;
 }
+/* Satu pintu scan untuk KEDUA alur pemesanan:
+   - 'awaiting_scan'                 → pesanan "Bayar di Kasir": scan = pesanan sah & mulai diproses.
+   - 'awaiting_payment_verification' → pesanan "Bayar Online" (QRIS): scan di kasir dipakai
+     SEBAGAI GANTI tombol manual "Konfirmasi Pembayaran Diterima" — kasir tetap wajib mengecek
+     dulu mutasi/notifikasi dana di aplikasi DANA/e-wallet SEBELUM mengarahkan kamera ke QR
+     pembeli, persis seperti sebelum menekan tombol manualnya. Scan hanya mempercepat
+     langkah konfirmasi, bukan menggantikan pengecekan dana itu sendiri.
+   Kedua jenis pesanan dicocokkan lewat kode yang sama (order.id / nomor antrian), jadi satu
+   tombol "Scan QR Pesanan" ini sekarang otomatis mendeteksi & memproses pesanan dari
+   manapun asalnya. Begitu status berubah, event 'order-confirmed' disiarkan lewat
+   BroadcastChannel + localStorage fallback (lihat listener di bawah) supaya halaman sukses
+   di sisi pembeli ikut ter-update otomatis tanpa reload, untuk kedua jenis pembayaran. */
 function confirmOrderByCode(rawCode){
   const code = extractOrderIdFromScan(rawCode);
-  if(!code) return;
+  if(!code){ resumeScannerIfPaused(); return; }
   const order = orders.find(o =>
-    o.status === 'awaiting_scan' &&
+    (o.status === 'awaiting_scan' || o.status === 'awaiting_payment_verification') &&
     (o.id === code || o.queueNo.toUpperCase() === code.toUpperCase())
   );
   if(!order){
-    // Cek juga: mungkin kode ini valid tapi pesanannya sudah pernah discan sebelumnya
+    // Cek juga: mungkin kode ini valid tapi pesanannya sudah pernah dikonfirmasi/dihapus sebelumnya
     const already = orders.find(o => o.id === code || o.queueNo.toUpperCase() === code.toUpperCase());
-    showToast(already ? tt('Pesanan ini sudah pernah discan sebelumnya') : tt('Kode tidak ditemukan / bukan pesanan yang valid'));
+    showToast(already ? tt('Pesanan ini sudah pernah discan/dikonfirmasi sebelumnya') : tt('Kode tidak ditemukan / bukan pesanan yang valid'));
+    // Kode ini bukan pesanan yang valid — overlay TETAP terbuka, jadi kamera
+    // harus dilanjutkan lagi supaya kasir bisa langsung coba scan yang benar.
+    resumeScannerIfPaused();
     return;
   }
+  const wasOnlinePayment = order.status === 'awaiting_payment_verification';
   order.status = 'pending';
   persistOrders();
   clearPendingOrderIdIfMatches(order.id);
   if(orderChannel) orderChannel.postMessage({ type:'order-confirmed', orderId: order.id });
   closeScanOverlay();
-  renderKasirOrders();
-  showToast(`${tt('Pesanan')} ${order.queueNo} ${tt('diterima & masuk antrean dapur')}`);
+  renderKasirOrders(); // otomatis juga menyegarkan daftar "Belum Diverifikasi" (renderKasirPaymentVerify)
+  updateAwaitingScanBadge();
+  showToast(wasOnlinePayment
+    ? `${tt('Pembayaran')} ${order.queueNo} ${tt('dikonfirmasi via scan & masuk antrean dapur')}`
+    : `${tt('Pesanan')} ${order.queueNo} ${tt('diterima & masuk antrean dapur')}`);
 }
 
 /* ---- Notifikasi + suara di sisi Pembeli saat pesanan selesai ---- */
@@ -4599,6 +4943,9 @@ if(orderChannel){
       if(msg.orderId === currentSuccessOrderId && !$('#viewSuccess').hidden){
         applySuccessStatus('confirmed');
       }
+      // Kalau pembeli masih di halaman QRIS (belum pindah), otomatis lanjutkan
+      // ke halaman sukses — ini yang menggantikan tombol "Saya Sudah Bayar".
+      if(o) autoAdvanceFromQrisIfConfirmed(o);
     } else if(msg.type === 'order-done'){
       // Sinkronkan status lokal juga, untuk browser tab lain yang membuka Halaman Kasir
       const o = orders.find(x=> x.queueNo === msg.queueNo);
@@ -4626,32 +4973,39 @@ window.addEventListener('storage', (e)=>{
   try{
     const updated = JSON.parse(e.newValue);
     const prevDone = new Set(orders.filter(o=>o.status==='done').map(o=>o.queueNo));
-    const prevAwaiting = new Set(orders.filter(o=>o.status==='awaiting_scan').map(o=>o.id));
+    const prevAwaiting = new Set(orders.filter(o=>o.status==='awaiting_scan' || o.status==='awaiting_payment_verification').map(o=>o.id));
     orders = updated;
     orders.forEach(o=>{
       if(o.status==='done' && !prevDone.has(o.queueNo)) handleOrderDoneNotice(o.queueNo);
     });
     // Kalau pesanan yang sedang ditampilkan di halaman sukses pembeli baru saja
-    // berpindah dari 'awaiting_scan' ke status lain (dikonfirmasi kasir), langsung
-    // update tampilannya — tanpa BroadcastChannel, ini jalur cadangannya (fallback antar tab).
+    // berpindah dari 'awaiting_scan'/'awaiting_payment_verification' ke status lain
+    // (dikonfirmasi kasir), langsung update tampilannya — tanpa BroadcastChannel,
+    // ini jalur cadangannya (fallback antar tab).
     if(currentSuccessOrderId && prevAwaiting.has(currentSuccessOrderId)){
       const o = orders.find(x=> x.id === currentSuccessOrderId);
-      if(o && o.status !== 'awaiting_scan'){
+      if(o && o.status !== 'awaiting_scan' && o.status !== 'awaiting_payment_verification'){
         clearPendingOrderIdIfMatches(currentSuccessOrderId);
         if(!$('#viewSuccess').hidden) applySuccessStatus('confirmed');
+        // Fallback juga untuk pembeli yang masih di halaman QRIS (lihat versi
+        // BroadcastChannel-nya di orderChannel.onmessage).
+        autoAdvanceFromQrisIfConfirmed(o);
       }
     }
     if(!$('#viewKasir').hidden) renderKasirOrders();
   }catch(err){}
 });
 
-/* ---- Halaman QRIS (khusus Bayar Online) ---- */
+/* ---- Halaman QRIS (khusus Bayar Online) ----
+   PENTING: file statis ini tidak terhubung ke payment gateway sungguhan, jadi
+   TIDAK BISA memverifikasi sendiri apakah QRIS benar-benar sudah dibayar.
+   Makanya di sini TIDAK ADA lagi "auto-sukses" otomatis — pesanan online cuma
+   pindah ke antrean dapur setelah KASIR mengonfirmasi manual bahwa dana sudah
+   masuk ke rekening/DANA kasir (lihat renderKasirPaymentVerify). Tombol
+   "Saya Sudah Bayar" di bawah cuma memberi tahu kasir bahwa pembeli mengklaim
+   sudah membayar — bukan bukti pembayaran itu sendiri. */
 let qrisTimer = null;
 let qrisSecondsLeft = 300; // 5 menit
-let qrisAutoDetectTimer = null;
-// Simulasi jeda deteksi pembayaran oleh sistem (payment gateway) setelah QR discan.
-// Di implementasi nyata, ini diganti dengan polling/webhook status pembayaran dari payment gateway.
-const QRIS_AUTO_DETECT_DELAY_MS = 8000;
 
 function updateQrisCountdownDisplay(){
   const m = String(Math.floor(qrisSecondsLeft/60)).padStart(2,'0');
@@ -4669,40 +5023,101 @@ function startQrisCountdown(){
     updateQrisCountdownDisplay();
     if(qrisSecondsLeft <= 0){
       clearInterval(qrisTimer);
-      clearTimeout(qrisAutoDetectTimer);
       $('#qrisTimerBox').hidden = true;
       $('#qrisExpired').hidden = false;
-      $('#qrisWaiting').hidden = true;
     }
   }, 1000);
 }
-function startQrisAutoDetect(){
-  clearTimeout(qrisAutoDetectTimer);
-  $('#qrisWaiting').hidden = false;
-  // Sistem otomatis mendeteksi status pembayaran QRIS; begitu terbayar, langsung
-  // lanjut ke halaman "Pesanan Diterima" tanpa perlu pengguna menekan tombol apa pun.
-  qrisAutoDetectTimer = setTimeout(()=>{
-    clearInterval(qrisTimer);
-    $('#viewQris').hidden = true;
-    finalizeOrderSuccess();
-  }, QRIS_AUTO_DETECT_DELAY_MS);
-}
+
+/* ===================== HALAMAN QRIS — OTOMATIS, TANPA TOMBOL =====================
+   Dulu pembeli harus menekan tombol "Saya Sudah Bayar" secara manual dulu baru
+   pesanan dibuat. Sekarang pesanan (status 'awaiting_payment_verification')
+   langsung dibuat OTOMATIS begitu halaman QRIS ini dibuka — pembeli tinggal
+   scan & bayar QRIS-nya di aplikasi e-wallet/m-banking mereka sendiri.
+   Halaman ini menampilkan status "menunggu" secara permanen (bukan tombol) dan
+   BERPINDAH SENDIRI ke halaman berikutnya begitu sistem mendeteksi dana sudah
+   dikonfirmasi masuk oleh kasir (lewat event 'order-confirmed' yang disiarkan
+   ketika kasir menekan "Konfirmasi Pembayaran Diterima" ATAU men-scan QR
+   pesanan pembeli) — lihat listener order-confirmed di bawah. Tidak ada aksi
+   apa pun yang perlu dilakukan pembeli setelah halaman ini terbuka. */
 function openQrisPage(){
   $('#qrisAmount').textContent = rupiah(cartTotal());
   $('#qrisSaveBtn').href = $('.qris-img').src; // simpan QR sebagai gambar (base64, jadi bisa disimpan offline)
+  $('#qrisWaiting').hidden = false;
   startQrisCountdown();
-  startQrisAutoDetect();
   $('#viewQris').hidden = false;
+
+  // Buat pesanan online sekarang juga (bukan menunggu tombol) — status awal
+  // tetap 'awaiting_payment_verification' sampai kasir benar-benar mengonfirmasi
+  // dana diterima; lihat comment panjang di dekat pushOrderToKasir untuk alasannya.
+  finalizeOrderSuccess({ showSuccessView: false });
 }
+/* Tombol "Simpan QRIS" sebelumnya cuma mengandalkan atribut download bawaan
+   <a> pada data URI base64. Ini TIDAK jalan di banyak browser HP (terutama
+   Safari iOS, dan sebagian WebView Android) — attribute download diabaikan
+   untuk data: URI, jadi gambar cuma kebuka/tidak terjadi apa-apa, bukannya
+   kesimpan. Diganti dengan strategi bertingkat: (1) Web Share API kalau
+   didukung (paling andal di HP, muncul opsi "Simpan Gambar"), (2) fallback
+   Blob URL + klik <a> terprogram (lebih kompatibel daripada data URI
+   langsung), (3) fallback terakhir buka gambar di tab baru supaya pembeli
+   bisa tekan-lama gambar lalu pilih "Simpan Gambar" secara manual. */
+function dataURItoBlob(dataURI){
+  const parts = dataURI.split(',');
+  const mimeMatch = parts[0].match(/:(.*?);/);
+  const mime = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+  const binary = atob(parts[1]);
+  const bytes = new Uint8Array(binary.length);
+  for(let i = 0; i < binary.length; i++){ bytes[i] = binary.charCodeAt(i); }
+  return new Blob([bytes], { type: mime });
+}
+async function saveQrisImage(){
+  const src = $('.qris-img').src;
+  try{
+    const blob = dataURItoBlob(src);
+    const file = new File([blob], 'QRIS-KopiSenja.jpg', { type: blob.type });
+    if(navigator.canShare && navigator.canShare({ files: [file] })){
+      await navigator.share({ files: [file], title: tt('Simpan QRIS') });
+      return;
+    }
+    const blobUrl = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = blobUrl;
+    a.download = 'QRIS-KopiSenja.jpg';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(()=> URL.revokeObjectURL(blobUrl), 5000);
+  }catch(e){
+    if(e && e.name === 'AbortError') return; // pembeli batal share, tidak perlu fallback
+    window.open(src, '_blank');
+    showToast(tt('Tekan lama gambar untuk menyimpan'));
+  }
+}
+$('#qrisSaveBtn').addEventListener('click', (e)=>{
+  e.preventDefault();
+  saveQrisImage();
+});
 $('#backFromQris').addEventListener('click', ()=>{
   clearInterval(qrisTimer);
-  clearTimeout(qrisAutoDetectTimer);
   $('#viewQris').hidden = true;
 });
 $('#qrisRefreshBtn').addEventListener('click', ()=>{
   startQrisCountdown();
-  startQrisAutoDetect();
 });
+
+/* Begitu halaman QRIS mendeteksi pesanan yang sedang ditunggu (currentSuccessOrderId)
+   sudah dikonfirmasi kasir, halaman ini otomatis ditutup dan berpindah ke halaman
+   sukses (menampilkan QR pesanan sebagai bukti + status "Pesanan Diterima") —
+   tanpa pembeli perlu menekan apa pun. */
+function autoAdvanceFromQrisIfConfirmed(order){
+  if($('#viewQris').hidden) return;
+  if(!order || order.id !== currentSuccessOrderId) return;
+  clearInterval(qrisTimer);
+  $('#viewQris').hidden = true;
+  renderOrderQr(order);
+  applySuccessStatus('confirmed');
+  $('#viewSuccess').hidden = false;
+}
 
 // Nomor HP wajib diawali 62 atau 08 (boleh ada spasi/strip, dicek setelah dibersihkan)
 function isPhoneValid(v){
@@ -4772,14 +5187,6 @@ $('#inputPhone').addEventListener('input', (e)=>{
   el.setSelectionRange(newPos, newPos);
 });
 $('#inputEmail').addEventListener('input', ()=> $('#fieldEmail').classList.remove('invalid'));
-
-$('#againBtn').addEventListener('click', ()=>{
-  cart = [];
-  renderCartBar();
-  persistCart();
-  $('#viewSuccess').hidden = true;
-  // Nama, HP, email, dan nomor meja SENGAJA tidak dihapus supaya tidak perlu diisi ulang tiap pesan.
-});
 
 /* ===================== PROFILE (AKUN GOOGLE — LOGIN ASLI) ===================== */
 let googleAccount = null; // {name, email} — diisi dari data akun Google asli setelah login
@@ -4971,7 +5378,7 @@ function heroMediaHTML(){
     return `<img src="${heroMediaData}" class="hero-media-custom" alt="Kopi Senja">`;
   }
   if(heroMediaType === 'video' && heroMediaData){
-    return `<video src="${heroMediaData}" class="hero-media-custom" autoplay loop muted playsinline></video>`;
+    return `<video src="${heroMediaData}" class="hero-media-custom hero-media-video" autoplay loop muted playsinline></video>`;
   }
   return `<div class="cup-wrap"><div class="steam"><span></span><span></span><span></span></div><span class="cup-emoji">☕</span></div>`;
 }
@@ -4981,6 +5388,7 @@ function renderHeroMedia(){
   if(slot) slot.innerHTML = heroMediaHTML();
   const preview = $('#settingsHeroPreview');
   if(preview) preview.innerHTML = heroMediaHTML();
+  applyHeroMediaTransform();
 }
 
 async function persistHeroMedia(){
@@ -5018,6 +5426,176 @@ $('#settingsResetHeroBtn').addEventListener('click', ()=>{
   broadcastHeroMedia();
   renderHeroMedia();
   showToast(tt('Dikembalikan ke ikon bawaan'));
+});
+
+/* ===================== PENGATURAN: UKURAN & POSISI GAMBAR/VIDEO =====================
+   Kasir/pemilik warung bisa membesar-kecilkan (zoom) dan menggeser posisi
+   (kiri-kanan, atas-bawah) foto/video/ikon di tampilan depan. Diterapkan lewat
+   CSS transform pada elemen media itu sendiri, jadi berlaku sama baik untuk
+   ikon cangkir bawaan, foto, maupun video — dan tetap disimpan & disiarkan
+   seperti pengaturan lainnya supaya halaman pembeli lain ikut berubah. */
+const DEFAULT_HERO_TRANSFORM = { size: 100, offsetX: 0, offsetY: 0 };
+let heroMediaStyle = { ...DEFAULT_HERO_TRANSFORM };
+
+function heroMediaTransformCSS(){
+  return `translate(${heroMediaStyle.offsetX}px, ${heroMediaStyle.offsetY}px) scale(${heroMediaStyle.size / 100})`;
+}
+function applyHeroMediaTransform(){
+  const css = heroMediaTransformCSS();
+  const slotChild = $('#heroMediaSlot') && $('#heroMediaSlot').firstElementChild;
+  if(slotChild) slotChild.style.transform = css;
+  const previewChild = $('#settingsHeroPreview') && $('#settingsHeroPreview').firstElementChild;
+  if(previewChild) previewChild.style.transform = css;
+}
+function syncHeroTransformInputsUI(){
+  const sizeRange = $('#heroSizeRange'), sizeValue = $('#heroSizeValue');
+  const xRange = $('#heroPosXRange'), xValue = $('#heroPosXValue');
+  const yRange = $('#heroPosYRange'), yValue = $('#heroPosYValue');
+  if(sizeRange) sizeRange.value = heroMediaStyle.size;
+  if(sizeValue) sizeValue.textContent = heroMediaStyle.size + '%';
+  if(xRange) xRange.value = heroMediaStyle.offsetX;
+  if(xValue) xValue.textContent = heroMediaStyle.offsetX + 'px';
+  if(yRange) yRange.value = heroMediaStyle.offsetY;
+  if(yValue) yValue.textContent = heroMediaStyle.offsetY + 'px';
+}
+async function persistHeroMediaStyle(){
+  await storageSet('heroMediaStyle', JSON.stringify(heroMediaStyle));
+}
+function broadcastHeroMediaStyle(){
+  if(menuChannel) menuChannel.postMessage({ type:'hero-media-style-updated', heroMediaStyle });
+}
+
+$('#heroSizeRange').addEventListener('input', (e)=>{
+  heroMediaStyle.size = parseInt(e.target.value, 10) || DEFAULT_HERO_TRANSFORM.size;
+  $('#heroSizeValue').textContent = heroMediaStyle.size + '%';
+  applyHeroMediaTransform();
+});
+$('#heroSizeRange').addEventListener('change', ()=>{
+  persistHeroMediaStyle();
+  broadcastHeroMediaStyle();
+  showToast(tt('Ukuran gambar/video diperbarui'));
+});
+
+$('#heroPosXRange').addEventListener('input', (e)=>{
+  heroMediaStyle.offsetX = parseInt(e.target.value, 10) || 0;
+  $('#heroPosXValue').textContent = heroMediaStyle.offsetX + 'px';
+  applyHeroMediaTransform();
+});
+$('#heroPosXRange').addEventListener('change', ()=>{
+  persistHeroMediaStyle();
+  broadcastHeroMediaStyle();
+  showToast(tt('Posisi gambar/video diperbarui'));
+});
+
+$('#heroPosYRange').addEventListener('input', (e)=>{
+  heroMediaStyle.offsetY = parseInt(e.target.value, 10) || 0;
+  $('#heroPosYValue').textContent = heroMediaStyle.offsetY + 'px';
+  applyHeroMediaTransform();
+});
+$('#heroPosYRange').addEventListener('change', ()=>{
+  persistHeroMediaStyle();
+  broadcastHeroMediaStyle();
+  showToast(tt('Posisi gambar/video diperbarui'));
+});
+
+$('#settingsResetHeroTransformBtn').addEventListener('click', ()=>{
+  heroMediaStyle = { ...DEFAULT_HERO_TRANSFORM };
+  applyHeroMediaTransform();
+  syncHeroTransformInputsUI();
+  persistHeroMediaStyle();
+  broadcastHeroMediaStyle();
+  showToast(tt('Ukuran & posisi dikembalikan ke bawaan'));
+});
+
+/* ===================== PENGATURAN: TEKS & FONT NAMA TOKO =====================
+   Dari Profil > Pengaturan, kasir/pemilik warung bisa mengubah tulisan "Kopi Senja"
+   di bawah foto/video tampilan depan, mengganti jenis font, dan mengatur ukurannya.
+   Sama seperti foto/video & warna, perubahan disimpan lewat storageSet & disiarkan
+   lewat BroadcastChannel supaya tab lain (termasuk halaman pembeli) ikut berubah. */
+const DEFAULT_BRAND = { text: 'Kopi Senja', tagline: 'NGOPI SANTAI, CERITA BERLANJUT', font: 'Fraunces', size: 30 };
+let brandStyle = { ...DEFAULT_BRAND };
+
+function applyBrandStyle(){
+  const el = $('#heroBrandTitle');
+  if(el){
+    el.textContent = brandStyle.text || DEFAULT_BRAND.text;
+    el.style.fontFamily = `'${brandStyle.font}', serif`;
+    el.style.fontSize = brandStyle.size + 'px';
+  }
+  const taglineEl = $('#heroBrandTagline');
+  if(taglineEl) taglineEl.textContent = brandStyle.tagline || DEFAULT_BRAND.tagline;
+}
+function syncBrandInputsUI(){
+  const textInput = $('#brandTextInput');
+  const taglineInput = $('#brandTaglineInput');
+  const fontSelect = $('#brandFontSelect');
+  const sizeRange = $('#brandSizeRange');
+  const sizeValue = $('#brandSizeValue');
+  if(textInput) textInput.value = brandStyle.text;
+  if(taglineInput) taglineInput.value = brandStyle.tagline;
+  if(fontSelect) fontSelect.value = brandStyle.font;
+  if(sizeRange) sizeRange.value = brandStyle.size;
+  if(sizeValue) sizeValue.textContent = brandStyle.size + 'px';
+}
+async function persistBrandStyle(){
+  await storageSet('brandStyle', JSON.stringify(brandStyle));
+}
+function broadcastBrandStyle(){
+  if(menuChannel) menuChannel.postMessage({ type:'brand-style-updated', brandStyle });
+}
+
+$('#brandTextInput').addEventListener('input', (e)=>{
+  brandStyle.text = e.target.value;
+  applyBrandStyle();
+});
+$('#brandTextInput').addEventListener('change', ()=>{
+  if(!brandStyle.text.trim()) brandStyle.text = DEFAULT_BRAND.text;
+  applyBrandStyle();
+  syncBrandInputsUI();
+  persistBrandStyle();
+  broadcastBrandStyle();
+  showToast(tt('Tulisan nama toko diperbarui'));
+});
+
+$('#brandTaglineInput').addEventListener('input', (e)=>{
+  brandStyle.tagline = e.target.value;
+  applyBrandStyle();
+});
+$('#brandTaglineInput').addEventListener('change', ()=>{
+  if(!brandStyle.tagline.trim()) brandStyle.tagline = DEFAULT_BRAND.tagline;
+  applyBrandStyle();
+  syncBrandInputsUI();
+  persistBrandStyle();
+  broadcastBrandStyle();
+  showToast(tt('Tulisan slogan diperbarui'));
+});
+
+$('#brandFontSelect').addEventListener('change', (e)=>{
+  brandStyle.font = e.target.value;
+  applyBrandStyle();
+  persistBrandStyle();
+  broadcastBrandStyle();
+  showToast(tt('Font tulisan diperbarui'));
+});
+
+$('#brandSizeRange').addEventListener('input', (e)=>{
+  brandStyle.size = parseInt(e.target.value, 10) || DEFAULT_BRAND.size;
+  $('#brandSizeValue').textContent = brandStyle.size + 'px';
+  applyBrandStyle();
+});
+$('#brandSizeRange').addEventListener('change', ()=>{
+  persistBrandStyle();
+  broadcastBrandStyle();
+  showToast(tt('Ukuran tulisan diperbarui'));
+});
+
+$('#settingsResetBrandBtn').addEventListener('click', ()=>{
+  brandStyle = { ...DEFAULT_BRAND };
+  applyBrandStyle();
+  syncBrandInputsUI();
+  persistBrandStyle();
+  broadcastBrandStyle();
+  showToast(tt('Tulisan nama toko dikembalikan ke bawaan'));
 });
 
 /* ===================== KUSTOMISASI WARNA WEBSITE =====================
@@ -5114,6 +5692,8 @@ let settingsUnlocked = false;
 $('#rowSettings').addEventListener('click', ()=>{
   if(settingsUnlocked){
     renderHeroMedia();
+    syncHeroTransformInputsUI();
+    syncBrandInputsUI();
     syncThemeInputsUI(themeColors);
     $('#viewSettings').hidden = false;
   } else {
@@ -5132,6 +5712,8 @@ $('#settingsLoginBtn').addEventListener('click', ()=>{
   settingsUnlocked = true;
   $('#viewSettingsLogin').hidden = true;
   renderHeroMedia();
+  syncHeroTransformInputsUI();
+  syncBrandInputsUI();
   syncThemeInputsUI(themeColors);
   $('#viewSettings').hidden = false;
 });
@@ -5252,12 +5834,26 @@ function renderKasirHoursPane(){
   if($('#kasirCloseTimeInput')) $('#kasirCloseTimeInput').value = shopCloseTime;
 }
 
+/* Blok "Atur Jam Operasional" di halaman Jam Operasional pembeli HANYA
+   ditampilkan kalau sedang login sebagai Kasir (kasirLoggedIn === true).
+   Kalau belum/tidak login kasir, blok ini otomatis disembunyikan lagi —
+   jadi pembeli biasa tidak akan pernah melihat atau bisa mengakses fitur
+   atur jam ini sama sekali. */
+function syncHoursKasirEditVisibility(){
+  const pane = $('#hoursKasirEditPane');
+  if(!pane) return;
+  pane.hidden = !kasirLoggedIn;
+  if(kasirLoggedIn) renderKasirHoursPane();
+}
+
 $('#kasirToggleOpenBtn').addEventListener('click', ()=>{
   shopOpen = !shopOpen;
   persistShopStatus();
   broadcastShopStatus();
   renderKasirHoursPane();
   renderInfoCardStatus();
+  renderMenu();
+  renderCartBar();
   showToast(shopOpen ? tt('Warung ditandai Buka') : tt('Warung ditandai Tutup'));
 });
 
@@ -5290,6 +5886,7 @@ function renderHoursPage(){
     }).join('')}</div>
     <div class="hours-note">${tt('Buka setiap hari termasuk Sabtu & Minggu, dengan jam operasional yang sama — tidak ada jam khusus akhir pekan.')}</div>
   `;
+  syncHoursKasirEditVisibility();
 }
 
 $('#infoCard').addEventListener('click', ()=>{ renderHoursPage(); $('#viewHours').hidden = false; });
@@ -5353,7 +5950,22 @@ async function init(){
   if(savedHeroMediaType) heroMediaType = savedHeroMediaType;
   const savedHeroMediaData = await storageGet('heroMediaData');
   if(savedHeroMediaData) heroMediaData = savedHeroMediaData;
+
+  // Muat ukuran & posisi kustom gambar/video tampilan depan (jika pernah diubah dari bawaan)
+  const savedHeroMediaStyle = await storageGet('heroMediaStyle');
+  if(savedHeroMediaStyle){
+    try{ heroMediaStyle = { ...DEFAULT_HERO_TRANSFORM, ...JSON.parse(savedHeroMediaStyle) }; }catch(e){ heroMediaStyle = { ...DEFAULT_HERO_TRANSFORM }; }
+  }
   renderHeroMedia();
+  syncHeroTransformInputsUI();
+
+  // Muat tulisan/font/ukuran nama toko kustom (jika kasir pernah mengganti dari bawaan)
+  const savedBrandStyle = await storageGet('brandStyle');
+  if(savedBrandStyle){
+    try{ brandStyle = { ...DEFAULT_BRAND, ...JSON.parse(savedBrandStyle) }; }catch(e){ brandStyle = { ...DEFAULT_BRAND }; }
+  }
+  applyBrandStyle();
+  syncBrandInputsUI();
 
   // Muat warna website kustom (jika kasir pernah mengganti dari warna bawaan)
   const savedThemeColors = await storageGet('themeColors');
@@ -5430,9 +6042,10 @@ async function init(){
   renderTableChip();
   renderCartBar();
 
-  // Pulihkan halaman QR pesanan kalau masih ada pesanan yang BELUM discan
-  // kasir — supaya QR tidak hilang cuma karena halaman ditutup/dimuat ulang.
-  // Baru berhenti ditampilkan otomatis setelah kasir benar-benar men-scan-nya.
+  // Pulihkan halaman sukses kalau masih ada pesanan yang BELUM dikonfirmasi
+  // kasir (belum discan, ATAU pembayaran online belum diverifikasi) — supaya
+  // statusnya tidak hilang cuma karena halaman ditutup/dimuat ulang. Baru
+  // berhenti ditampilkan otomatis setelah kasir benar-benar mengonfirmasinya.
   try{
     const pendingId = await storageGet('pendingOrderId');
     if(pendingId){
@@ -5444,8 +6057,20 @@ async function init(){
         renderOrderQr(pendingOrder);
         applySuccessStatus('awaiting');
         $('#viewSuccess').hidden = false;
+      } else if(pendingOrder && pendingOrder.status === 'awaiting_payment_verification'){
+        // Bayar Online yang belum dikonfirmasi: tampilkan lagi halaman QRIS
+        // (bukan halaman sukses) supaya pembeli masih bisa scan/simpan QRIS-nya,
+        // dan tetap menunggu otomatis — persis kondisi sebelum halaman ditutup.
+        $('#queueNo').textContent = pendingOrder.queueNo;
+        currentQueueNo = pendingOrder.queueNo;
+        currentSuccessOrderId = pendingOrder.id;
+        $('#qrisAmount').textContent = rupiah(pendingOrder.total);
+        $('#qrisSaveBtn').href = $('.qris-img').src;
+        $('#qrisWaiting').hidden = false;
+        startQrisCountdown();
+        $('#viewQris').hidden = false;
       } else {
-        // Pesanan sudah discan/selesai (atau sudah tidak ada) — bersihkan penanda lama
+        // Pesanan sudah dikonfirmasi/selesai (atau sudah tidak ada) — bersihkan penanda lama
         storageSet('pendingOrderId', '');
       }
     }
