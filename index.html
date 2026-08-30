@@ -8,6 +8,9 @@
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700;9..144,900&family=Work+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 <!-- Google Identity Services (Sign In With Google) — resmi dari Google, dipakai untuk login Google asli -->
 <script src="https://accounts.google.com/gsi/client" async defer></script>
+<!-- Pembuat QR Code (untuk QR pesanan pembeli) & pembaca QR Code lewat kamera (untuk halaman Kasir) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
 <style>
   :root{
     --cream:#F6ECDA;
@@ -436,15 +439,86 @@
   .kasir-order-head b{ font-family:'JetBrains Mono', monospace; color:var(--cherry); font-size:14px; }
   .kasir-order-head span{ font-size:10.5px; color:var(--muted); flex:1; }
   .kasir-delete-btn{
-    flex:none; width:26px; height:26px; border-radius:8px; border:1px solid var(--line);
-    background:#fff; font-size:12px; cursor:pointer; display:flex; align-items:center; justify-content:center;
+    flex:none; width:22px; height:22px; border-radius:7px; border:1px solid var(--line);
+    background:#fff; font-size:10.5px; cursor:pointer; display:flex; align-items:center; justify-content:center;
   }
   .kasir-delete-btn:active{ background:var(--cherry); border-color:var(--cherry); }
   .kasir-order-status{
-    font-size:9.5px; font-weight:700; padding:2px 8px; border-radius:999px; flex:none;
+    font-size:9px; font-weight:700; padding:2px 7px; border-radius:999px; flex:none;
   }
   .kasir-order-status.pending{ background:rgba(193,122,62,0.16); color:var(--amber); }
   .kasir-order-status.done{ background:rgba(110,123,88,0.16); color:var(--sage); }
+  .kasir-order-status.awaiting{ background:rgba(156,43,61,0.14); color:var(--cherry); }
+
+  /* ---------- SCAN QR PESANAN (Kasir) ---------- */
+  .scan-order-btn{
+    width:100%; border:none; border-radius:10px; background:var(--espresso-2); color:#fff;
+    font-weight:700; font-size:12px; padding:9px; cursor:pointer; margin-bottom:12px;
+    display:flex; align-items:center; justify-content:center; gap:6px;
+  }
+  .scan-order-btn .badge-count{
+    background:var(--cherry); color:#fff; font-size:9.5px; font-weight:700;
+    border-radius:999px; padding:1px 6px; margin-left:1px;
+  }
+  .scan-overlay{
+    position:absolute; inset:0; z-index:90; background:rgba(20,12,7,0.65);
+    display:flex; align-items:center; justify-content:center; padding:20px;
+  }
+  .scan-box{
+    background:var(--paper); border-radius:18px; padding:20px 18px; width:100%; max-width:320px;
+    box-shadow:0 24px 50px -18px rgba(43,27,18,0.55); max-height:88vh; overflow-y:auto;
+  }
+  .scan-box .klb-top{ display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
+  .scan-box .klb-title{ font-family:'Fraunces', serif; font-size:16px; font-weight:700; }
+  .scan-box .klb-close{
+    background:none; border:none; font-size:16px; cursor:pointer; color:var(--muted); line-height:1; padding:2px;
+  }
+  .scan-box .kasir-hint{ text-align:left; margin-bottom:12px; padding:10px 12px; font-size:11px; }
+  #scanReader{
+    border-radius:12px; overflow:hidden; background:#000; margin-bottom:12px; min-height:200px;
+  }
+  .scan-cam-controls{ display:flex; gap:8px; margin:-4px 0 12px; }
+  .scan-cam-btn{
+    flex:1; border:1.5px solid var(--line); background:#fff; border-radius:10px;
+    font-size:11.5px; font-weight:700; color:var(--espresso-2); padding:8px; cursor:pointer;
+  }
+  .scan-cam-btn.active{ background:var(--amber); border-color:var(--amber); color:#fff; }
+  .scan-manual-label{ font-size:11px; color:var(--muted); margin:10px 0 6px; text-align:center; }
+  .scan-manual-row{ display:flex; gap:8px; }
+  .scan-manual-row input{
+    flex:1; padding:10px 12px; border:1.5px solid var(--line); border-radius:10px;
+    font-family:'JetBrains Mono', monospace; font-size:13px; text-transform:uppercase;
+  }
+  .scan-manual-row button{
+    flex:none; border:none; border-radius:10px; background:var(--cherry); color:#fff;
+    font-weight:700; font-size:12.5px; padding:0 16px; cursor:pointer;
+  }
+  .scan-fallback-note{ font-size:10.5px; color:var(--muted); text-align:center; margin-top:8px; line-height:1.5; }
+
+  /* ---------- QR PESANAN (halaman sukses, sisi pembeli) ---------- */
+  .order-qr-box{
+    background:#fff; border:1.5px solid var(--line); border-radius:16px;
+    padding:16px; margin-top:14px; text-align:center;
+  }
+  .order-qr-box #orderQrCode{ display:flex; justify-content:center; margin-bottom:10px; }
+  .order-qr-box #orderQrCode img{ border-radius:8px; }
+  .order-qr-label{ font-size:10px; font-weight:700; letter-spacing:1px; color:var(--muted); margin-bottom:8px; }
+  .order-qr-code-text{
+    font-family:'JetBrains Mono', monospace; font-weight:700; color:var(--cherry);
+    font-size:13px; letter-spacing:1px; margin-top:6px;
+  }
+  .order-qr-summary{
+    text-align:left; margin-top:14px; padding-top:12px; border-top:1px dashed var(--line);
+  }
+  .order-qr-summary .oqs-item{
+    display:flex; justify-content:space-between; gap:10px; font-size:12px; line-height:1.6; color:var(--espresso-2);
+  }
+  .order-qr-summary .oqs-item small{ display:block; color:var(--muted); font-size:10.5px; font-weight:400; }
+  .order-qr-summary .oqs-total{
+    display:flex; justify-content:space-between; font-size:13.5px; font-weight:700;
+    margin-top:8px; padding-top:8px; border-top:1px dashed var(--line); color:var(--espresso);
+  }
+  .order-qr-summary .oqs-total b{ font-family:'JetBrains Mono', monospace; color:var(--cherry); }
   .kasir-order-meta{ font-size:11px; color:var(--muted); margin:4px 0 8px; }
   .kasir-order-items{ font-size:12px; line-height:1.6; margin-bottom:8px; }
   .kasir-order-total{
@@ -453,17 +527,17 @@
   }
   .kasir-order-total b{ font-family:'JetBrains Mono', monospace; color:var(--espresso-2); }
   .kasir-done-btn{
-    width:100%; border:none; border-radius:10px; background:var(--sage); color:#fff;
-    font-weight:700; font-size:12.5px; padding:10px; cursor:pointer;
+    width:100%; border:none; border-radius:9px; background:var(--sage); color:#fff;
+    font-weight:700; font-size:11.5px; padding:8px; cursor:pointer;
   }
   .kasir-done-btn:disabled{ background:#D8CDBC; cursor:default; }
   .kasir-empty{ text-align:center; color:var(--muted); font-size:12.5px; padding:40px 20px; line-height:1.6; }
 
   /* ---------- KELOLA MENU (KASIR) ---------- */
-  .kasir-subtabs{ display:flex; gap:8px; margin-bottom:12px; }
+  .kasir-subtabs{ display:flex; gap:6px; margin-bottom:10px; }
   .kasir-subtab{
-    flex:1; padding:9px; text-align:center; border-radius:10px; border:1.5px solid var(--line);
-    background:#fff; font-size:12.5px; font-weight:700; color:var(--muted); cursor:pointer;
+    flex:1; padding:7px; text-align:center; border-radius:9px; border:1.5px solid var(--line);
+    background:#fff; font-size:11.5px; font-weight:700; color:var(--muted); cursor:pointer;
   }
   .kasir-subtab.active{ background:var(--espresso-2); border-color:var(--espresso-2); color:#fff; }
   .kasir-menu-search{
@@ -495,12 +569,12 @@
     font-family:'JetBrains Mono', monospace; font-size:11.5px;
   }
   .kasir-menu-row .kmr-save-btn{
-    border:1.5px solid var(--sage); color:var(--sage); background:#fff; font-size:10.5px;
-    font-weight:700; padding:5px 9px; border-radius:8px; cursor:pointer;
+    border:1.5px solid var(--sage); color:var(--sage); background:#fff; font-size:9.5px;
+    font-weight:700; padding:4px 8px; border-radius:7px; cursor:pointer;
   }
   .kasir-menu-row .kmr-save-btn:active{ background:var(--sage); color:#fff; }
   .kasir-menu-row .kmr-stock-btn{
-    flex:none; font-size:10.5px; font-weight:700; padding:7px 10px; border-radius:8px; cursor:pointer;
+    flex:none; font-size:9.5px; font-weight:700; padding:6px 9px; border-radius:7px; cursor:pointer;
     border:1.5px solid var(--cherry); color:var(--cherry); background:#fff; margin-top:6px;
   }
   .kasir-menu-row .kmr-stock-btn.is-sold{ border-color:var(--sage); color:var(--sage); }
@@ -528,29 +602,108 @@
     flex:1; padding:6px 8px; border:1.5px solid var(--line); border-radius:8px; font-size:11.5px; background:#fff;
   }
   .kasir-cat-manage-row button{
-    border:1.5px solid var(--sage); color:var(--sage); background:#fff; font-size:10px; font-weight:700;
-    padding:6px 8px; border-radius:8px; cursor:pointer; flex:none;
+    border:1.5px solid var(--sage); color:var(--sage); background:#fff; font-size:9.5px; font-weight:700;
+    padding:5px 7px; border-radius:7px; cursor:pointer; flex:none;
   }
 
   .kasir-add-menu-btn{
-    width:100%; padding:10px; border-radius:10px; border:1.5px dashed var(--amber); background:#fff;
-    color:var(--amber); font-weight:700; font-size:12.5px; cursor:pointer; margin-bottom:12px;
+    width:100%; padding:8px; border-radius:9px; border:1.5px dashed var(--amber); background:#fff;
+    color:var(--amber); font-weight:700; font-size:11.5px; cursor:pointer; margin-bottom:12px;
   }
   .kasir-add-form{
-    background:var(--paper); border:1.5px solid var(--line); border-radius:12px; padding:12px; margin-bottom:14px;
+    background:var(--paper); border:1.5px solid var(--line); border-radius:11px; padding:11px; margin-bottom:12px;
     display:flex; flex-direction:column; gap:6px;
   }
   .kasir-add-form input, .kasir-add-form select{
-    width:100%; padding:8px 10px; border:1.5px solid var(--line); border-radius:8px; font-size:12px;
+    width:100%; padding:7px 9px; border:1.5px solid var(--line); border-radius:8px; font-size:11.5px;
     font-family:'Work Sans', sans-serif; background:#fff;
   }
-  .kasir-add-form label{ font-size:11px; font-weight:700; color:var(--muted); margin-top:4px; }
-  .kasir-add-form-actions{ display:flex; gap:8px; margin-top:6px; }
+  .kasir-add-form label{ font-size:10.5px; font-weight:700; color:var(--muted); margin-top:4px; }
+  .kasir-add-form-actions{ display:flex; gap:7px; margin-top:6px; }
   .kasir-add-form-actions button{
-    flex:1; padding:9px; border-radius:8px; font-size:12px; font-weight:700; cursor:pointer; border:none;
+    flex:1; padding:8px; border-radius:8px; font-size:11.5px; font-weight:700; cursor:pointer; border:none;
   }
   .kasir-add-submit{ background:var(--espresso-2); color:#fff; }
   .kasir-add-cancel{ background:#fff; border:1.5px solid var(--line) !important; color:var(--muted); }
+
+  /* ---------- JAM OPERASIONAL (KASIR) ---------- */
+  .kasir-hours-status-card{
+    background:var(--paper); border:1.5px solid var(--line); border-radius:12px; padding:14px;
+    display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:14px;
+  }
+  .kasir-hours-status-card .khs-label{ font-size:11px; color:var(--muted); font-weight:600; }
+  .kasir-hours-status-card .khs-value{ font-family:'Fraunces', serif; font-size:17px; font-weight:700; margin-top:2px; }
+  .kasir-hours-status-card .khs-value.is-open{ color:var(--sage); }
+  .kasir-hours-status-card .khs-value.is-closed{ color:var(--cherry); }
+  .kasir-toggle-open-btn{
+    flex:none; padding:8px 13px; border-radius:9px; font-size:11.5px; font-weight:700; cursor:pointer; border:none;
+    color:#fff;
+  }
+  .kasir-toggle-open-btn.act-close{ background:var(--cherry); }
+  .kasir-toggle-open-btn.act-open{ background:var(--sage); }
+  .kasir-save-hours-btn{
+    width:100%; padding:8px; border-radius:8px; font-size:11.5px; font-weight:700; cursor:pointer;
+    border:none; background:var(--espresso-2); color:#fff; margin-top:8px;
+  }
+
+  .info-card .name{ display:inline-flex; align-items:center; gap:6px; }
+  .info-card .close-badge{
+    display:inline-block; font-size:13px; font-weight:800; letter-spacing:0.5px;
+    color:#fff; background:var(--cherry); border-radius:7px; padding:4px 10px; text-transform:uppercase;
+  }
+  .info-card.is-closed .hours::before{ color:var(--cherry); }
+
+  /* ---------- PENGATURAN: GANTI FOTO/VIDEO TAMPILAN DEPAN ---------- */
+  .hero-media-custom{
+    width:64px; height:64px; border-radius:50%; object-fit:cover; display:block;
+    box-shadow:0 6px 14px -4px rgba(0,0,0,0.5); border:2px solid rgba(246,236,218,0.35);
+  }
+  .settings-hero-preview{
+    background:linear-gradient(155deg, #3A2416 0%, var(--espresso) 55%, #1C1108 100%);
+    border-radius:16px; padding:24px; display:flex; align-items:center; justify-content:center;
+    margin-bottom:16px;
+  }
+  .settings-hero-preview .hero-media-custom{ width:120px; height:120px; }
+  .settings-hero-actions{ display:flex; flex-direction:row; gap:6px; }
+  .settings-media-btn{
+    flex:1; display:flex; align-items:center; justify-content:center; gap:4px;
+    padding:7px 8px; border-radius:8px; border:1.5px solid var(--amber); background:#fff;
+    color:var(--amber); font-weight:700; font-size:10.5px; cursor:pointer; text-align:center;
+  }
+  .settings-media-reset-btn{
+    flex:1; padding:7px 8px; border-radius:8px; border:1.5px solid var(--line); background:#fff;
+    color:var(--muted); font-weight:700; font-size:10px; cursor:pointer;
+  }
+
+  /* ---------- PENGATURAN: KUSTOMISASI WARNA WEBSITE ---------- */
+  .settings-section-title{
+    font-family:'Fraunces', serif; font-weight:700; font-size:14.5px;
+    margin:22px 0 5px; display:flex; align-items:center; gap:6px;
+  }
+  .theme-color-grid{ display:flex; flex-direction:column; gap:6px; margin-top:8px; }
+  .theme-color-row{
+    display:flex; align-items:center; gap:9px;
+    background:#fff; border:1.5px solid var(--line); border-radius:10px;
+    padding:7px 9px; cursor:pointer;
+  }
+  .tcr-swatch{
+    flex:none; width:26px; height:26px; border-radius:8px;
+    border:1.5px solid rgba(0,0,0,0.08); box-shadow:inset 0 0 0 3px rgba(255,255,255,0.5);
+  }
+  .tcr-info{ flex:1; min-width:0; display:flex; flex-direction:column; gap:1px; }
+  .tcr-label{ font-size:11px; font-weight:600; color:var(--espresso-2); line-height:1.3; }
+  .tcr-hex{
+    font-family:'JetBrains Mono', monospace; font-size:9.5px; color:var(--muted);
+    text-transform:uppercase; letter-spacing:0.5px;
+  }
+  .theme-color-row input[type="color"]{
+    flex:none; width:28px; height:28px; padding:0; border:none; border-radius:8px;
+    background:none; cursor:pointer;
+  }
+  /* Rapikan tampilan swatch bawaan browser pada input color di berbagai browser */
+  .theme-color-row input[type="color"]::-webkit-color-swatch-wrapper{ padding:0; border-radius:8px; }
+  .theme-color-row input[type="color"]::-webkit-color-swatch{ border:none; border-radius:8px; }
+  .theme-color-row input[type="color"]::-moz-color-swatch{ border:none; border-radius:8px; }
 
   .order-done-banner{
     position:fixed; left:14px; right:14px; top:16px; z-index:90;
@@ -791,6 +944,7 @@
     width:74px; height:74px; border-radius:50%; background:var(--sage); color:#fff;
     display:flex; align-items:center; justify-content:center; font-size:32px; margin-bottom:18px;
   }
+  .success-icon.waiting{ background:var(--amber); }
   .success-body h2{ font-family:'Fraunces', serif; font-size:21px; margin:0 0 8px; }
   .success-body p{ font-size:12.5px; color:var(--muted); max-width:260px; line-height:1.5; }
   .wa-btn{
@@ -957,9 +1111,11 @@
         </div>
       </div>
       <div class="hero-brand">
-        <div class="cup-wrap">
-          <div class="steam"><span></span><span></span><span></span></div>
-          <span class="cup-emoji">☕</span>
+        <div id="heroMediaSlot">
+          <div class="cup-wrap">
+            <div class="steam"><span></span><span></span><span></span></div>
+            <span class="cup-emoji">☕</span>
+          </div>
         </div>
         <h1>Kopi Senja</h1>
         <p data-i18n="NGOPI SANTAI, CERITA BERLANJUT">NGOPI SANTAI, CERITA BERLANJUT</p>
@@ -969,8 +1125,8 @@
 
     <div class="info-card" id="infoCard">
       <div>
-        <span class="name">Warkop Senja</span>
-        <span class="hours" data-i18n="Buka hari ini, 07.00–22.00">Buka hari ini, 07.00–22.00</span>
+        <span class="name">Warkop Senja<span class="close-badge" id="closeBadge" hidden>Close</span></span>
+        <span class="hours" id="infoCardHoursText" data-i18n="Buka hari ini, 07.00–22.00">Buka hari ini, 07.00–22.00</span>
       </div>
       <span class="chev">›</span>
     </div>
@@ -1019,10 +1175,147 @@
         <button class="profile-row" id="rowLanguage">
           <span class="pr-ic">🌐</span><span class="pr-label" data-i18n="Bahasa">Bahasa</span><span class="pr-chev">›</span>
         </button>
+        <button class="profile-row" id="rowSettings">
+          <span class="pr-ic">⚙️</span><span class="pr-label" data-i18n="Pengaturan">Pengaturan</span><span class="pr-chev">›</span>
+        </button>
         <button class="profile-row" id="rowHelp">
           <span class="pr-ic">🛟</span><span class="pr-label" data-i18n="Bantuan">Bantuan</span><span class="pr-chev">›</span>
         </button>
       </div>
+    </div>
+  </div>
+
+  <!-- ===== PENGATURAN (GANTI FOTO/VIDEO TAMPILAN DEPAN) ===== -->
+  <div class="view-page" id="viewSettings" hidden>
+    <div class="page-top">
+      <button id="backFromSettings">←</button>
+      <h3 data-i18n="Pengaturan">Pengaturan</h3>
+    </div>
+    <div class="page-body">
+      <div class="kasir-hint" data-i18n="Ganti foto atau video yang tampil di bagian atas halaman depan (menggantikan ikon cangkir kopi). Gunakan file berukuran kecil supaya cepat dimuat.">Ganti foto atau video yang tampil di bagian atas halaman depan (menggantikan ikon cangkir kopi). Gunakan file berukuran kecil supaya cepat dimuat.</div>
+
+      <div class="settings-hero-preview" id="settingsHeroPreview"></div>
+
+      <div class="settings-hero-actions">
+        <label class="settings-media-btn" for="settingsHeroMediaInput">🖼️ <span data-i18n="Ganti Foto/Video">Ganti Foto/Video</span></label>
+        <input type="file" id="settingsHeroMediaInput" accept="image/*,video/*" hidden>
+
+        <button type="button" class="settings-media-reset-btn" id="settingsResetHeroBtn" data-i18n="Kembalikan ke Ikon Bawaan">Kembalikan ke Ikon Bawaan</button>
+      </div>
+
+      <div class="settings-section-title">🎨 <span data-i18n="Warna Tampilan Website">Warna Tampilan Website</span></div>
+      <div class="kasir-hint" data-i18n="Atur sendiri warna latar belakang, warna teks, dan warna aksen website — bebas pilih warna apa saja. Perubahan langsung terlihat di seluruh halaman.">Atur sendiri warna latar belakang, warna teks, dan warna aksen website — bebas pilih warna apa saja. Perubahan langsung terlihat di seluruh halaman.</div>
+
+      <div class="theme-color-grid" id="themeColorGrid">
+        <label class="theme-color-row" data-var="cream">
+          <span class="tcr-swatch" id="swatch-cream" style="background:#F6ECDA"></span>
+          <span class="tcr-info">
+            <span class="tcr-label" data-i18n="Warna Latar Belakang">Warna Latar Belakang</span>
+            <span class="tcr-hex" id="hex-cream">#F6ECDA</span>
+          </span>
+          <input type="color" id="color-cream" value="#F6ECDA">
+        </label>
+
+        <label class="theme-color-row" data-var="paper">
+          <span class="tcr-swatch" id="swatch-paper" style="background:#FFFBF3"></span>
+          <span class="tcr-info">
+            <span class="tcr-label" data-i18n="Warna Kartu / Kotak Konten">Warna Kartu / Kotak Konten</span>
+            <span class="tcr-hex" id="hex-paper">#FFFBF3</span>
+          </span>
+          <input type="color" id="color-paper" value="#FFFBF3">
+        </label>
+
+        <label class="theme-color-row" data-var="espresso">
+          <span class="tcr-swatch" id="swatch-espresso" style="background:#2B1B12"></span>
+          <span class="tcr-info">
+            <span class="tcr-label" data-i18n="Warna Font / Teks Utama">Warna Font / Teks Utama</span>
+            <span class="tcr-hex" id="hex-espresso">#2B1B12</span>
+          </span>
+          <input type="color" id="color-espresso" value="#2B1B12">
+        </label>
+
+        <label class="theme-color-row" data-var="amber">
+          <span class="tcr-swatch" id="swatch-amber" style="background:#C17A3E"></span>
+          <span class="tcr-info">
+            <span class="tcr-label" data-i18n="Warna Aksen Utama (tombol, sorotan)">Warna Aksen Utama (tombol, sorotan)</span>
+            <span class="tcr-hex" id="hex-amber">#C17A3E</span>
+          </span>
+          <input type="color" id="color-amber" value="#C17A3E">
+        </label>
+
+        <label class="theme-color-row" data-var="cherry">
+          <span class="tcr-swatch" id="swatch-cherry" style="background:#9C2B3D"></span>
+          <span class="tcr-info">
+            <span class="tcr-label" data-i18n="Warna Aksen Kedua (harga, badge)">Warna Aksen Kedua (harga, badge)</span>
+            <span class="tcr-hex" id="hex-cherry">#9C2B3D</span>
+          </span>
+          <input type="color" id="color-cherry" value="#9C2B3D">
+        </label>
+
+        <label class="theme-color-row" data-var="espresso2">
+          <span class="tcr-swatch" id="swatch-espresso2" style="background:#4A3324"></span>
+          <span class="tcr-info">
+            <span class="tcr-label" data-i18n="Warna Font Sekunder / Judul">Warna Font Sekunder / Judul</span>
+            <span class="tcr-hex" id="hex-espresso2">#4A3324</span>
+          </span>
+          <input type="color" id="color-espresso2" value="#4A3324">
+        </label>
+
+        <label class="theme-color-row" data-var="amberLight">
+          <span class="tcr-swatch" id="swatch-amberLight" style="background:#E7C393"></span>
+          <span class="tcr-info">
+            <span class="tcr-label" data-i18n="Warna Aksen Muda (highlight terang)">Warna Aksen Muda (highlight terang)</span>
+            <span class="tcr-hex" id="hex-amberLight">#E7C393</span>
+          </span>
+          <input type="color" id="color-amberLight" value="#E7C393">
+        </label>
+
+        <label class="theme-color-row" data-var="sage">
+          <span class="tcr-swatch" id="swatch-sage" style="background:#6E7B58"></span>
+          <span class="tcr-info">
+            <span class="tcr-label" data-i18n="Warna Aksen Hijau (status berhasil)">Warna Aksen Hijau (status berhasil)</span>
+            <span class="tcr-hex" id="hex-sage">#6E7B58</span>
+          </span>
+          <input type="color" id="color-sage" value="#6E7B58">
+        </label>
+
+        <label class="theme-color-row" data-var="line">
+          <span class="tcr-swatch" id="swatch-line" style="background:#E6D6B8"></span>
+          <span class="tcr-info">
+            <span class="tcr-label" data-i18n="Warna Garis / Pembatas">Warna Garis / Pembatas</span>
+            <span class="tcr-hex" id="hex-line">#E6D6B8</span>
+          </span>
+          <input type="color" id="color-line" value="#E6D6B8">
+        </label>
+
+        <label class="theme-color-row" data-var="muted">
+          <span class="tcr-swatch" id="swatch-muted" style="background:#8A7A63"></span>
+          <span class="tcr-info">
+            <span class="tcr-label" data-i18n="Warna Teks Redup / Keterangan">Warna Teks Redup / Keterangan</span>
+            <span class="tcr-hex" id="hex-muted">#8A7A63</span>
+          </span>
+          <input type="color" id="color-muted" value="#8A7A63">
+        </label>
+      </div>
+
+      <button type="button" class="settings-media-reset-btn" id="settingsResetThemeBtn" style="width:100%; margin-top:12px;" data-i18n="Kembalikan ke Warna Bawaan">Kembalikan ke Warna Bawaan</button>
+    </div>
+  </div>
+
+  <!-- ===== GERBANG ID KASIR UNTUK MASUK PENGATURAN ===== -->
+  <div class="kasir-login-overlay" id="viewSettingsLogin" hidden>
+    <div class="kasir-login-box">
+      <div class="klb-top">
+        <span class="klb-title" data-i18n="Masuk ke Pengaturan">Masuk ke Pengaturan</span>
+        <button class="klb-close" id="backFromSettingsLogin" type="button">✕</button>
+      </div>
+      <div class="kasir-hint" data-i18n="Halaman ini khusus staf. Masukkan ID Kasir untuk melanjutkan.">Halaman ini khusus staf. Masukkan ID Kasir untuk melanjutkan.</div>
+      <div class="field" id="fieldSettingsId">
+        <label><span data-i18n="ID Kasir">ID Kasir</span> <span class="req">*</span></label>
+        <input type="password" inputmode="numeric" id="settingsIdInput" placeholder="ID Kasir" data-i18n-placeholder="ID Kasir">
+        <span class="err" data-i18n="ID Kasir salah, coba lagi">ID Kasir salah, coba lagi</span>
+      </div>
+      <button class="again-btn" id="settingsLoginBtn" style="width:100%" data-i18n="Masuk">Masuk</button>
     </div>
   </div>
 
@@ -1059,9 +1352,11 @@
       <div class="kasir-subtabs">
         <button class="kasir-subtab active" id="kasirTabOrders" type="button" data-i18n="Pesanan Masuk">Pesanan Masuk</button>
         <button class="kasir-subtab" id="kasirTabMenu" type="button" data-i18n="Kelola Menu">Kelola Menu</button>
+        <button class="kasir-subtab" id="kasirTabHours" type="button" data-i18n="Jam Operasional">Jam Operasional</button>
       </div>
       <div id="kasirOrdersPane">
         <div class="kasir-hint" id="kasirWelcomeHint" data-i18n="Pesanan baru dari pembeli otomatis muncul di sini. Tekan Selesai kalau pesanan sudah siap diambil.">Pesanan baru dari pembeli otomatis muncul di sini. Tekan Selesai kalau pesanan sudah siap diambil.</div>
+        <button type="button" class="scan-order-btn" id="openScanBtn">📷 <span data-i18n="Scan QR Pesanan">Scan QR Pesanan</span><span class="badge-count" id="awaitingScanCount" hidden>0</span></button>
         <div id="kasirOrdersBody"></div>
       </div>
       <div id="kasirMenuPane" hidden>
@@ -1089,6 +1384,25 @@
 
         <input type="text" class="kasir-menu-search" id="kasirMenuSearch" placeholder="Cari nama menu..." data-i18n-placeholder="Cari nama menu...">
         <div id="kasirMenuBody"></div>
+      </div>
+      <div id="kasirHoursPane" hidden>
+        <div class="kasir-hint" data-i18n="Atur jam buka-tutup warung dan status buka/tutup saat ini. Perubahan langsung terlihat di halaman depan pembeli.">Atur jam buka-tutup warung dan status buka/tutup saat ini. Perubahan langsung terlihat di halaman depan pembeli.</div>
+
+        <div class="kasir-hours-status-card">
+          <div>
+            <div class="khs-label" data-i18n="Status warung saat ini">Status warung saat ini</div>
+            <div class="khs-value" id="kasirShopStatusText">Buka</div>
+          </div>
+          <button type="button" class="kasir-toggle-open-btn" id="kasirToggleOpenBtn">Tutup Warung</button>
+        </div>
+
+        <div class="kasir-add-form">
+          <label data-i18n="Jam Buka">Jam Buka</label>
+          <input type="time" id="kasirOpenTimeInput">
+          <label data-i18n="Jam Tutup">Jam Tutup</label>
+          <input type="time" id="kasirCloseTimeInput">
+          <button type="button" class="kasir-save-hours-btn" id="kasirSaveHoursBtn" data-i18n="Simpan Jam Operasional">Simpan Jam Operasional</button>
+        </div>
       </div>
     </div>
   </div>
@@ -1183,8 +1497,8 @@
         <span class="err" data-i18n="Nama wajib diisi">Nama wajib diisi</span>
       </div>
       <div class="field" id="fieldPhone">
-        <label data-i18n="Nomor HP (info promo)">Nomor HP (info promo)</label>
-        <input type="text" id="inputPhone" placeholder="08xx xxxx xxxx atau 62xxx xxxx">
+        <label data-i18n="Nomor HP">Nomor HP</label>
+        <input type="text" id="inputPhone" placeholder="08xx xxxx xxxx">
         <span class="err" data-i18n="Nomor HP harus diawali 08 atau 62">Nomor HP harus diawali 08 atau 62</span>
       </div>
       <div class="field" id="fieldEmail">
@@ -1293,12 +1607,44 @@
   <!-- ===== SUCCESS VIEW ===== -->
   <div class="view-page" id="viewSuccess" hidden>
     <div class="success-body">
-      <div class="success-icon">✓</div>
-      <h2 data-i18n="Pesanan Diterima">Pesanan Diterima</h2>
-      <p data-i18n="Terima kasih! Kopi dan camilanmu sedang diseduh & disiapkan barista. Ambil nomor antrianmu di meja.">Terima kasih! Kopi dan camilanmu sedang diseduh &amp; disiapkan barista. Ambil nomor antrianmu di meja.</p>
+      <div class="success-icon" id="successIcon" hidden>✓</div>
+      <h2 id="successTitle" data-i18n="Pesanan Diterima" hidden>Pesanan Diterima</h2>
+      <p id="successDesc" data-i18n="Terima kasih! Kopi dan camilanmu sedang diseduh & disiapkan barista. Ambil nomor antrianmu di meja." hidden>Terima kasih! Kopi dan camilanmu sedang diseduh &amp; disiapkan barista. Ambil nomor antrianmu di meja.</p>
       <div class="queue"><small data-i18n="NOMOR ANTRIAN">NOMOR ANTRIAN</small><span id="queueNo">A-01</span></div>
-      <p class="wa-hint" id="sentToKasirHint" data-i18n="Pesanan sudah terkirim ke kasir. Kamu akan mendapat notifikasi begitu pesanan siap diambil.">Pesanan sudah terkirim ke kasir. Kamu akan mendapat notifikasi begitu pesanan siap diambil.</p>
+      <div class="order-qr-box">
+        <div class="order-qr-label" data-i18n="TUNJUKKAN QR INI KE KASIR">TUNJUKKAN QR INI KE KASIR</div>
+        <div id="orderQrCode"></div>
+        <div class="order-qr-code-text" id="orderQrCodeText"></div>
+        <div class="order-qr-summary" id="orderQrSummary"></div>
+      </div>
+      <div class="qris-waiting" id="scanWaitingBadge" hidden>
+        <span class="qris-waiting-dot"></span>
+        <span data-i18n="Menunggu di-scan kasir... halaman ini otomatis lanjut begitu di-scan">Menunggu di-scan kasir... halaman ini otomatis lanjut begitu di-scan</span>
+      </div>
+      <p class="wa-hint" id="sentToKasirHint" hidden>Kode ini berisi rincian pesanan &amp; totalnya. Simpan halaman ini — kode tidak akan hilang sampai kasir men-scan dan menerima pesananmu.</p>
       <button class="again-btn" id="againBtn" data-i18n="Kembali">Kembali</button>
+    </div>
+  </div>
+
+  <!-- ===== SCAN QR PESANAN (dibuka dari Halaman Kasir) ===== -->
+  <div class="scan-overlay" id="scanOverlay" hidden>
+    <div class="scan-box">
+      <div class="klb-top">
+        <span class="klb-title" data-i18n="Scan QR Pesanan">Scan QR Pesanan</span>
+        <button class="klb-close" id="closeScanBtn" aria-label="Tutup">✕</button>
+      </div>
+      <div class="kasir-hint" data-i18n="Arahkan kamera ke QR yang ditunjukkan pembeli. Pesanan otomatis masuk ke antrean setelah QR terbaca.">Arahkan kamera ke QR yang ditunjukkan pembeli. Pesanan otomatis masuk ke antrean setelah QR terbaca.</div>
+      <div id="scanReader"></div>
+      <div class="scan-cam-controls" id="scanCamControls" hidden>
+        <button type="button" class="scan-cam-btn" id="toggleTorchBtn" hidden>🔦 <span data-i18n="Senter">Senter</span></button>
+        <button type="button" class="scan-cam-btn" id="switchCamBtn" hidden>🔄 <span data-i18n="Ganti Kamera">Ganti Kamera</span></button>
+      </div>
+      <div class="scan-manual-label" data-i18n="Kamera tidak jalan? Ketik kode/nomor antrian pesanan:">Kamera tidak jalan? Ketik kode/nomor antrian pesanan:</div>
+      <div class="scan-manual-row">
+        <input type="text" id="scanManualInput" placeholder="cth. A-01 / ord_xxxx">
+        <button type="button" id="scanManualBtn" data-i18n="Cari">Cari</button>
+      </div>
+      <div class="scan-fallback-note" data-i18n="Kode ini unik untuk tiap pesanan — pesanan berbeda pasti menghasilkan QR & kode yang berbeda pula.">Kode ini unik untuk tiap pesanan — pesanan berbeda pasti menghasilkan QR &amp; kode yang berbeda pula.</div>
     </div>
   </div>
 
@@ -1479,10 +1825,10 @@ const I18N = {
     "ar": "الاسم مطلوب",
     "ja": "氏名は必須です"
   },
-  "Nomor HP (info promo)": {
-    "en": "Phone Number (for promos)",
-    "ar": "رقم الهاتف (للعروض)",
-    "ja": "電話番号（お知らせ用）"
+  "Nomor HP": {
+    "en": "Phone Number",
+    "ar": "رقم الهاتف",
+    "ja": "電話番号"
   },
   "Kirim Struk ke Email": {
     "en": "Send Receipt to Email",
@@ -2698,7 +3044,28 @@ function renderKasirMenuManage(filterText){
 if(menuChannel){
   menuChannel.onmessage = (e)=>{
     const msg = e.data;
-    if(!msg || msg.type !== 'menu-updated') return;
+    if(!msg) return;
+    if(msg.type === 'shop-status-updated'){
+      shopOpen = !!msg.shopOpen;
+      shopOpenTime = msg.shopOpenTime || shopOpenTime;
+      shopCloseTime = msg.shopCloseTime || shopCloseTime;
+      renderInfoCardStatus();
+      if(!$('#viewKasir').hidden && !$('#kasirHoursPane').hidden) renderKasirHoursPane();
+      return;
+    }
+    if(msg.type === 'hero-media-updated'){
+      heroMediaType = msg.heroMediaType || 'default';
+      heroMediaData = msg.heroMediaData || null;
+      renderHeroMedia();
+      return;
+    }
+    if(msg.type === 'theme-updated'){
+      themeColors = { ...DEFAULT_THEME, ...(msg.themeColors || {}) };
+      applyThemeColors(themeColors);
+      syncThemeInputsUI(themeColors);
+      return;
+    }
+    if(msg.type !== 'menu-updated') return;
     applyCategoryOverrides(msg.categories);
     applyMenuOverrides(msg.overrides);
     renderTabs();
@@ -2713,6 +3080,28 @@ if(menuChannel){
 }
 // Cadangan lintas-tab kalau BroadcastChannel tidak tersedia: pantau perubahan localStorage
 window.addEventListener('storage', (e)=>{
+  if(e.key === (LS_PREFIX + 'shopOpen') || e.key === (LS_PREFIX + 'shopOpenTime') || e.key === (LS_PREFIX + 'shopCloseTime')){
+    storageGet('shopOpen').then(v=>{ if(v!==null && v!==undefined) shopOpen = v === '1'; });
+    storageGet('shopOpenTime').then(v=>{ if(v) shopOpenTime = v; });
+    storageGet('shopCloseTime').then(v=>{ if(v) shopCloseTime = v; renderInfoCardStatus(); if(!$('#viewKasir').hidden && !$('#kasirHoursPane').hidden) renderKasirHoursPane(); });
+    return;
+  }
+  if(e.key === (LS_PREFIX + 'heroMediaType') || e.key === (LS_PREFIX + 'heroMediaData')){
+    Promise.all([storageGet('heroMediaType'), storageGet('heroMediaData')]).then(([type, data])=>{
+      heroMediaType = type || 'default';
+      heroMediaData = data || null;
+      renderHeroMedia();
+    });
+    return;
+  }
+  if(e.key === (LS_PREFIX + 'themeColors') && e.newValue){
+    try{
+      themeColors = { ...DEFAULT_THEME, ...JSON.parse(e.newValue) };
+      applyThemeColors(themeColors);
+      syncThemeInputsUI(themeColors);
+    }catch(err){}
+    return;
+  }
   if(e.key !== (LS_PREFIX + 'menuOverrides') || !e.newValue) return;
   try{
     applyMenuOverrides(JSON.parse(e.newValue));
@@ -3544,13 +3933,21 @@ $('#inputTable').addEventListener('click', ()=>{
 $('#promoRow').addEventListener('click', ()=> showToast(tt('Fitur promo & voucher segera hadir')));
 
 /* ===================== KIRIM PESANAN KE HALAMAN KASIR =====================
-   Sebelumnya pesanan dikirim lewat WhatsApp; sekarang pesanan langsung masuk
-   ke antrean di Halaman Kasir (disimpan lewat storageSet + disiarkan lewat
-   BroadcastChannel supaya tab/halaman Kasir yang terbuka di browser yang sama
-   langsung ter-update tanpa perlu refresh).
+   Alurnya sekarang:
+   1. Saat checkout selesai, pesanan dibuat dengan status 'awaiting_scan' —
+      BELUM masuk ke antrean dapur yang terlihat kasir.
+   2. Pembeli melihat QR unik (isinya order.id, beda setiap pesanan) di
+      halaman sukses.
+   3. Kasir buka "Scan QR Pesanan" di Halaman Kasir, arahkan kamera ke QR
+      pembeli (atau ketik manual kode/nomor antriannya). Begitu cocok,
+      status pesanan berubah jadi 'pending' dan baru saat itu muncul di
+      antrean "Pesanan Masuk".
+   Data disimpan lewat storageSet + disiarkan lewat BroadcastChannel supaya
+   tab/halaman Kasir yang terbuka di browser yang sama langsung ter-update.
    CATATAN: BroadcastChannel & localStorage hanya bekerja dalam SATU browser/
    perangkat yang sama. Untuk sinkron nyata antar 2 HP berbeda (HP pembeli vs
-   tablet kasir), sistem ini butuh server/backend — belum ada di file statis ini. */
+   tablet kasir discan dari HP lain), sistem ini butuh server/backend
+   sungguhan (mis. Supabase) — belum ada di file statis ini. */
 const WA_NOMOR_WARUNG = '6285792304673'; // 085792304673 dalam format internasional (62 + tanpa angka 0 di depan), dipakai untuk tombol "Bantuan"
 
 let orderChannel = null;
@@ -3568,13 +3965,104 @@ function pushOrderToKasir(queueNo){
     total: cartTotal(),
     customerName: $('#inputName').value.trim(),
     customerPhone: $('#inputPhone').value.trim(),
-    status: 'pending', // 'pending' | 'done'
+    // Pesanan QRIS/online sudah otomatis 'pending' (langsung masuk antrean dapur) karena
+    // pembayarannya sendiri sudah jadi bukti konfirmasi — tidak perlu discan lagi oleh kasir.
+    // Pesanan "Bayar di Kasir" baru 'pending' SETELAH kasir men-scan QR pesanan pembeli.
+    status: paymentMethod === 'online' ? 'pending' : 'awaiting_scan',
     createdAt: Date.now(),
   };
   orders.unshift(order);
   persistOrders();
   if(orderChannel) orderChannel.postMessage({ type:'new-order', order });
   return order;
+}
+
+/* Bersihkan teks dari karakter yang bisa bikin pembuatan QR gagal (mis. tanda
+   pisah "—", bullet "•", emoji, atau huruf beraksen dari nama menu/catatan
+   custom). Pustaka QR yang dipakai di sini kadang gagal total meng-encode
+   karakter non-ASCII seperti itu, sehingga QR tidak pernah muncul walau isi
+   pesanannya pendek. Dengan disaring dulu, teks yang masuk ke QR selalu
+   berhasil dibuat DAN tetap persis mencerminkan menu, jumlah, catatan, dan
+   total pesanan yang sebenarnya — cuma tanda bacanya yang disederhanakan. */
+function qrSafeText(str){
+  return String(str)
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')      // buang aksen (é → e, dst.)
+    .replace(/[—–]/g, '-')                // en/em dash → tanda hubung biasa
+    .replace(/[•●]/g, '-')                // bullet → tanda hubung biasa
+    .replace(/[""]/g, '"')
+    .replace(/['']/g, "'")
+    .replace(/[^\x00-\x7E\n]/g, '');      // buang sisa karakter non-ASCII (emoji, dll.)
+}
+
+/* Susun teks lengkap isi pesanan (menu + total) yang dimasukkan ke dalam QR.
+   Dibuat sebagai teks biasa (bukan cuma ID) supaya kalau pembeli/kasir scan
+   pakai APLIKASI PEMBACA QR APAPUN (bukan cuma scanner bawaan web ini),
+   tetap langsung terbaca isi pesanan & totalnya — tidak perlu lookup ke
+   database. Baris "ID:" tetap disertakan di baris pertama supaya scanner
+   BAWAAN halaman Kasir bisa otomatis mencocokkan ke pesanan yang tersimpan. */
+function buildOrderQrText(order){
+  const lines = [];
+  lines.push(`ID:${order.id}`);
+  lines.push(`KOPI SENJA - Antrian ${order.queueNo}`);
+  lines.push(`Meja ${order.tableNumber} - ${order.orderType}`);
+  lines.push('------------------------');
+  order.items.forEach(i=>{
+    lines.push(`${i.qty}x ${i.name}${i.summary ? ' ('+i.summary+')' : ''}`);
+    if(i.notes) lines.push(`  Catatan: ${i.notes}`);
+  });
+  lines.push('------------------------');
+  lines.push(`TOTAL: ${rupiah(order.total)}`);
+  lines.push(`Bayar: ${order.paymentMethod==='online' ? 'QRIS' : 'Bayar di Kasir'}`);
+  return qrSafeText(lines.join('\n'));
+}
+
+/* Gambar QR unik untuk pesanan ini di halaman sukses. Isinya rincian pesanan
+   lengkap (menu + total) — lihat buildOrderQrText di atas. Karena tiap
+   pesanan punya isi (menu, jumlah, total) yang berbeda, QR yang dihasilkan
+   otomatis berbeda pula untuk tiap pesanan/pembeli. QR ini TIDAK hilang
+   otomatis — tetap tampil sampai kasir men-scan & menerima pesanan (lihat
+   penyimpanan pendingOrderId di finalizeOrderSuccess & init). */
+function renderOrderQr(order){
+  const box = $('#orderQrCode');
+  if(!box) return;
+  box.innerHTML = '';
+  const qrText = buildOrderQrText(order);
+  // PENTING: qrcodejs punya kapasitas kecil di typeNumber default (4) — teks
+  // pesanan yang lumayan panjang (menu + total) akan gagal dibuat dan diam-diam
+  // meninggalkan kotak QR kosong. Di sini kita coba typeNumber makin besar
+  // sampai ketemu ukuran yang muat, jadi QR SELALU tergambar berapa pun
+  // panjang isi pesanannya.
+  let drawn = false;
+  for(let typeNumber = 4; typeNumber <= 40 && !drawn; typeNumber++){
+    try{
+      box.innerHTML = '';
+      new QRCode(box, {
+        text: qrText,
+        width: 216,
+        height: 216,
+        colorDark: '#2B1B12',
+        colorLight: '#ffffff',
+        correctLevel: QRCode.CorrectLevel.L,
+        typeNumber: typeNumber,
+      });
+      drawn = true;
+    }catch(e){ /* teks belum muat di ukuran ini, coba ukuran berikutnya */ }
+  }
+  if(!drawn){
+    box.innerHTML = `<div class="kasir-empty" style="padding:24px 10px;">${tt('QR gagal dibuat, gunakan kode di bawah secara manual.')}</div>`;
+  }
+  const textEl = $('#orderQrCodeText');
+  if(textEl) textEl.textContent = order.queueNo;
+
+  // Hanya total yang ditampilkan langsung di halaman (di bawah QR) — rincian
+  // menu tetap ada di dalam isi QR itu sendiri untuk kasir.
+  const summaryEl = $('#orderQrSummary');
+  if(summaryEl){
+    summaryEl.innerHTML = `
+      <div class="oqs-total"><span>${tt('Total')}</span><b>${rupiah(order.total)}</b></div>
+    `;
+  }
 }
 
 /* ---- Nomor antrian berurutan (A-01, A-02, ...), reset otomatis ke 1 tiap ganti hari ---- */
@@ -3597,18 +4085,77 @@ function nextQueueNo(){
   return 'A-' + String(queueCounter).padStart(2, '0');
 }
 
+/* Tandai variabel global "pesanan yang sedang ditampilkan di halaman sukses",
+   supaya kalau kasir men-scan-nya SEMENTARA halaman ini masih terbuka di sisi
+   pembeli, tampilan bisa otomatis lanjut ke "Pesanan Diterima" tanpa reload —
+   persis seperti auto-deteksi pembayaran QRIS. */
+let currentSuccessOrderId = null;
+
+/* Ganti tampilan halaman sukses antara dua status:
+   'awaiting'  → belum discan kasir: ikon jam, judul "Menunggu Dikonfirmasi Kasir"
+   'confirmed' → sudah discan (atau sudah lunas via QRIS): ikon centang hijau seperti biasa */
+function applySuccessStatus(state){
+  const icon = $('#successIcon');
+  const title = $('#successTitle');
+  const desc = $('#successDesc');
+  const hint = $('#sentToKasirHint');
+  const waitBadge = $('#scanWaitingBadge');
+  // Ikon, judul, deskripsi, hint, dan badge menunggu sengaja disembunyikan permanen —
+  // halaman sukses hanya menampilkan nomor antrian, QR, dan ringkasan pesanan.
+  if(state === 'awaiting'){
+    icon.textContent = '⏳';
+    icon.classList.add('waiting');
+    title.textContent = tt('Menunggu Dikonfirmasi Kasir');
+    desc.textContent = tt('Pesananmu sudah dibuat. Tunjukkan QR di bawah ke kasir untuk mulai diproses.');
+    hint.textContent = tt('Kode ini berisi rincian pesanan & totalnya. Halaman ini otomatis lanjut begitu kasir men-scan QR-nya.');
+  } else {
+    icon.textContent = '✓';
+    icon.classList.remove('waiting');
+    title.textContent = tt('Pesanan Diterima');
+    desc.textContent = tt('Terima kasih! Kopi dan camilanmu sedang diseduh & disiapkan barista. Ambil nomor antrianmu di meja.');
+    hint.textContent = tt('Pesanan sudah diterima kasir dan masuk ke antrean dapur. Kamu akan mendapat notifikasi begitu pesanan siap diambil.');
+  }
+  icon.hidden = true;
+  title.hidden = true;
+  desc.hidden = true;
+  hint.hidden = true;
+  waitBadge.hidden = true;
+}
+
 function finalizeOrderSuccess(){
   persistCustomer();
   const queueNo = nextQueueNo();
   $('#queueNo').textContent = queueNo;
   currentQueueNo = queueNo;
   $('#viewSuccess').hidden = false;
-  pushOrderToKasir(queueNo);
+  const order = pushOrderToKasir(queueNo);
+  currentSuccessOrderId = order.id;
+  renderOrderQr(order);
+  if(order.status === 'awaiting_scan'){
+    // Bayar di Kasir: tampilkan status menunggu, dan simpan pendingOrderId supaya
+    // kalau halaman ini ditutup/dimuat ulang SEBELUM kasir sempat scan, QR-nya
+    // bisa ditampilkan lagi persis sama — lihat pemulihan di init().
+    applySuccessStatus('awaiting');
+    storageSet('pendingOrderId', order.id);
+  } else {
+    // QRIS/online: pembayaran sudah jadi bukti konfirmasi, langsung tampilkan status diterima.
+    applySuccessStatus('confirmed');
+    storageSet('pendingOrderId', '');
+  }
   saveOrderToHistory(queueNo);
   requestNotificationPermission();
   // "Panaskan" daftar suara text-to-speech browser dari sekarang, supaya nanti saat
   // notifikasi "pesanan siap" muncul, suaranya sudah siap & langsung terdengar (tidak diam di percobaan pertama).
   try{ if('speechSynthesis' in window) window.speechSynthesis.getVoices(); }catch(e){}
+}
+
+/* Hapus pendingOrderId dari storage HANYA kalau ID yang cocok/sudah discan
+   memang ID pesanan yang sedang "ditunggu" itu — supaya tidak salah hapus
+   status pesanan pembeli lain. */
+function clearPendingOrderIdIfMatches(orderId){
+  storageGet('pendingOrderId').then(saved=>{
+    if(saved === orderId) storageSet('pendingOrderId', '');
+  }).catch(()=>{});
 }
 
 /* ---- Gerbang Login Kasir (nama + sandi) ----
@@ -3640,21 +4187,26 @@ function showKasirOrdersPage(){
   $('#viewKasir').hidden = false;
 }
 
-/* ---- Subtab Halaman Kasir: "Pesanan Masuk" vs "Kelola Menu" ---- */
+/* ---- Subtab Halaman Kasir: "Pesanan Masuk" vs "Kelola Menu" vs "Jam Operasional" ---- */
 function switchKasirSubtab(which){
-  const isOrders = which === 'orders';
-  $('#kasirTabOrders').classList.toggle('active', isOrders);
-  $('#kasirTabMenu').classList.toggle('active', !isOrders);
-  $('#kasirOrdersPane').hidden = !isOrders;
-  $('#kasirMenuPane').hidden = isOrders;
-  if(!isOrders){
+  $('#kasirTabOrders').classList.toggle('active', which==='orders');
+  $('#kasirTabMenu').classList.toggle('active', which==='menu');
+  $('#kasirTabHours').classList.toggle('active', which==='hours');
+  $('#kasirOrdersPane').hidden = which!=='orders';
+  $('#kasirMenuPane').hidden = which!=='menu';
+  $('#kasirHoursPane').hidden = which!=='hours';
+  if(which==='menu'){
     renderKasirMenuManage($('#kasirMenuSearch').value);
     renderKasirCatManage();
     populateAddMenuCategorySelect();
   }
+  if(which==='hours'){
+    renderKasirHoursPane();
+  }
 }
 $('#kasirTabOrders').addEventListener('click', ()=> switchKasirSubtab('orders'));
 $('#kasirTabMenu').addEventListener('click', ()=> switchKasirSubtab('menu'));
+$('#kasirTabHours').addEventListener('click', ()=> switchKasirSubtab('hours'));
 $('#kasirMenuSearch').addEventListener('input', (e)=> renderKasirMenuManage(e.target.value));
 $('#kasirLoginBtn').addEventListener('click', ()=>{
   const name = $('#kasirNameInput').value.trim();
@@ -3691,11 +4243,15 @@ $('#kasirLogoutBtn').addEventListener('click', ()=>{
 });
 function renderKasirOrders(){
   const body = $('#kasirOrdersBody');
-  if(orders.length === 0){
-    body.innerHTML = `<div class="kasir-empty">${tt('Belum ada pesanan masuk.')}</div>`;
+  updateAwaitingScanBadge();
+  // Pesanan berstatus 'awaiting_scan' sengaja DISEMBUNYIKAN dari antrean dapur —
+  // baru muncul di sini setelah kasir men-scan QR-nya (lihat confirmOrderByCode).
+  const visibleOrders = orders.filter(o => o.status !== 'awaiting_scan');
+  if(visibleOrders.length === 0){
+    body.innerHTML = `<div class="kasir-empty">${tt('Belum ada pesanan masuk. Tekan "Scan QR Pesanan" untuk menerima pesanan dari pembeli.')}</div>`;
     return;
   }
-  body.innerHTML = orders.map(o=>{
+  body.innerHTML = visibleOrders.map(o=>{
     const itemsHtml = o.items.map(i=> `${i.qty}x ${tt(i.name)}${i.summary ? ' — '+i.summary : ''}`).join('<br>');
     const jam = new Date(o.createdAt).toLocaleTimeString('id-ID', {hour:'2-digit', minute:'2-digit'});
     return `
@@ -3741,6 +4297,201 @@ function markOrderDone(orderId){
   // notifikasi "pesanan siap" tidak akan pernah muncul di sisi Pembeli.
   handleOrderDoneNotice(order.queueNo);
   showToast(tt('Pesanan ditandai selesai'));
+}
+
+/* ===================== SCAN QR PESANAN (sisi Kasir) =====================
+   Kasir menekan "Scan QR Pesanan" → kamera menyala → QR pembeli discan →
+   kode hasil scan (order.id) dicocokkan dengan pesanan berstatus
+   'awaiting_scan' → kalau cocok, status diubah jadi 'pending' dan pesanan
+   baru saat itu muncul di antrean dapur. Ada juga input manual (ketik kode/
+   nomor antrian) untuk jaga-jaga kalau kamera tidak bisa dipakai. */
+let html5QrScanner = null;
+let scannerIsRunning = false;
+let scannerFacingMode = 'environment'; // 'environment' = kamera belakang, 'user' = kamera depan
+let torchOn = false;
+
+function updateAwaitingScanBadge(){
+  const el = $('#awaitingScanCount');
+  if(!el) return;
+  const count = orders.filter(o=> o.status === 'awaiting_scan').length;
+  el.textContent = String(count);
+  el.hidden = count === 0;
+}
+
+function openScanOverlay(){
+  $('#scanOverlay').hidden = false;
+  $('#scanManualInput').value = '';
+  scannerFacingMode = 'environment';
+  torchOn = false;
+  startQrCameraScanner();
+}
+function closeScanOverlay(){
+  $('#scanOverlay').hidden = true;
+  stopQrCameraScanner();
+}
+$('#openScanBtn').addEventListener('click', openScanOverlay);
+$('#closeScanBtn').addEventListener('click', closeScanOverlay);
+
+/* Area kotak pemindaian dibuat MENGIKUTI ukuran video kamera (bukan angka
+   tetap), dan diperbesar sampai 85% dari sisi terpendek layar kamera —
+   makin besar area target, makin gampang & cepat QR pesanan (yang sekarang
+   padat karena isinya rincian menu+total) berhasil terbaca. */
+function computeQrBox(viewfinderWidth, viewfinderHeight){
+  const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
+  const size = Math.floor(Math.min(minEdge * 0.85, 320));
+  return { width: size, height: size };
+}
+
+function startQrCameraScanner(){
+  if(scannerIsRunning) return;
+  if(typeof Html5Qrcode === 'undefined'){
+    $('#scanReader').innerHTML = `<div class="kasir-empty" style="color:#fff;">${tt('Modul kamera gagal dimuat. Gunakan input manual di bawah.')}</div>`;
+    return;
+  }
+  // Browser HANYA mengizinkan akses kamera (getUserMedia) di "konteks aman":
+  // halaman yang dibuka lewat https:// atau lewat localhost/127.0.0.1. Kalau
+  // file HTML ini dibuka langsung dari penyimpanan HP (file:///...) atau lewat
+  // http:// biasa, kamera akan SELALU ditolak oleh sistem — bukan soal kode,
+  // dan bukan bisa diperbaiki dari sisi JavaScript. Deteksi ini di awal supaya
+  // pesannya jelas menyebut penyebab sebenarnya, bukan cuma "izin ditolak".
+  if(!window.isSecureContext){
+    $('#scanReader').innerHTML = `<div class="kasir-empty" style="color:#fff; line-height:1.5;">${tt('Kamera hanya bisa diakses kalau halaman ini dibuka lewat HTTPS (atau localhost), bukan langsung dari file di HP. Upload file ini ke hosting web (mis. Netlify/GitHub Pages) lalu buka lewat alamat https://, atau gunakan input manual di bawah.')}</div>`;
+    return;
+  }
+  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+    $('#scanReader').innerHTML = `<div class="kasir-empty" style="color:#fff;">${tt('Browser ini tidak mendukung akses kamera. Gunakan input manual di bawah.')}</div>`;
+    return;
+  }
+  html5QrScanner = new Html5Qrcode('scanReader', {
+    // Manfaatkan BarcodeDetector bawaan browser kalau didukung (Chrome/Android) —
+    // jauh lebih cepat & akurat dibanding decoder JS murni, terutama untuk QR padat.
+    useBarCodeDetectorIfSupported: true,
+    verbose: false,
+  });
+  const scanConfig = {
+    fps: 15,
+    qrbox: computeQrBox,
+    aspectRatio: 1.0,
+    disableFlip: false,
+    // Minta resolusi kamera yang cukup tinggi — kamera resolusi rendah kesulitan
+    // membaca QR padat (banyak modul kecil) dari jarak tangan memegang HP.
+    videoConstraints: {
+      facingMode: scannerFacingMode,
+      width: { ideal: 1920 },
+      height: { ideal: 1080 },
+    },
+  };
+  const onSuccess = (decodedText)=>{ confirmOrderByCode(decodedText); };
+  const onFail = ()=>{ /* satu frame tanpa QR terbaca — normal, terus coba frame berikutnya */ };
+
+  // Cara utama: minta langsung lewat facingMode (paling andal lintas perangkat,
+  // tidak bergantung pada label kamera yang sering tidak konsisten antar HP/browser).
+  html5QrScanner.start({ facingMode: scannerFacingMode }, scanConfig, onSuccess, onFail)
+    .then(()=>{ scannerIsRunning = true; setupCameraControls(); })
+    .catch(()=>{
+      // Fallback: kalau constraint facingMode ditolak perangkat (jarang terjadi,
+      // biasanya di laptop/webcam), coba lagi dengan memilih dari daftar kamera yang tersedia.
+      Html5Qrcode.getCameras().then(devices=>{
+        if(!devices || !devices.length){
+          $('#scanReader').innerHTML = `<div class="kasir-empty" style="color:#fff;">${tt('Kamera tidak ditemukan. Gunakan input manual di bawah.')}</div>`;
+          return;
+        }
+        const backCam = devices.find(d=> /back|belakang|rear/i.test(d.label)) || devices[0];
+        html5QrScanner.start(backCam.id, scanConfig, onSuccess, onFail)
+          .then(()=>{ scannerIsRunning = true; setupCameraControls(); })
+          .catch(()=>{
+            $('#scanReader').innerHTML = `<div class="kasir-empty" style="color:#fff;">${tt('Tidak bisa mengakses kamera. Gunakan input manual di bawah.')}</div>`;
+          });
+      }).catch(()=>{
+        $('#scanReader').innerHTML = `<div class="kasir-empty" style="color:#fff;">${tt('Izin kamera ditolak. Gunakan input manual di bawah.')}</div>`;
+      });
+    });
+}
+
+/* Tampilkan tombol Senter/Ganti Kamera setelah kamera berhasil menyala, dan
+   sembunyikan tombol yang memang tidak didukung perangkat (mis. laptop tanpa
+   senter, atau device dengan cuma 1 kamera). */
+function setupCameraControls(){
+  $('#scanCamControls').hidden = false;
+  $('#switchCamBtn').hidden = false; // aman ditampilkan; kalau kamera lain tak ada, tinggal gagal & fallback balik
+
+  const torchBtn = $('#toggleTorchBtn');
+  torchBtn.hidden = true;
+  try{
+    const capabilities = html5QrScanner.getRunningTrackCameraCapabilities
+      ? html5QrScanner.getRunningTrackCameraCapabilities()
+      : null;
+    const torchSupported = capabilities && capabilities.torchFeature && capabilities.torchFeature().isSupported && capabilities.torchFeature().isSupported();
+    if(torchSupported) torchBtn.hidden = false;
+  }catch(e){ /* API senter tidak tersedia di browser ini, sembunyikan saja tombolnya */ }
+}
+
+$('#toggleTorchBtn').addEventListener('click', ()=>{
+  if(!scannerIsRunning || !html5QrScanner) return;
+  torchOn = !torchOn;
+  try{
+    html5QrScanner.applyVideoConstraints({ advanced: [{ torch: torchOn }] });
+    $('#toggleTorchBtn').classList.toggle('active', torchOn);
+  }catch(e){
+    torchOn = false;
+    showToast(tt('Senter tidak didukung di perangkat ini'));
+  }
+});
+
+$('#switchCamBtn').addEventListener('click', ()=>{
+  scannerFacingMode = scannerFacingMode === 'environment' ? 'user' : 'environment';
+  torchOn = false;
+  stopQrCameraScanner();
+  setTimeout(startQrCameraScanner, 250); // jeda singkat supaya stream kamera lama benar-benar lepas dulu
+});
+
+function stopQrCameraScanner(){
+  $('#scanCamControls').hidden = true;
+  if(scannerIsRunning && html5QrScanner){
+    html5QrScanner.stop().then(()=>{ html5QrScanner.clear(); }).catch(()=>{});
+    scannerIsRunning = false;
+  }
+}
+
+$('#scanManualBtn').addEventListener('click', ()=>{
+  const val = $('#scanManualInput').value.trim();
+  if(val) confirmOrderByCode(val);
+});
+$('#scanManualInput').addEventListener('keydown', (e)=>{
+  if(e.key === 'Enter'){ e.preventDefault(); $('#scanManualBtn').click(); }
+});
+
+/* Cocokkan kode hasil scan/ketik manual dengan pesanan yang masih menunggu
+   di-scan. QR sekarang berisi teks lengkap (menu + total) dengan baris
+   pertama "ID:xxx" — fungsi ini mengambil ID dari baris itu. Kalau yang
+   diketik/discan cuma satu baris pendek (mis. input manual "A-02" atau
+   "ord_xxx"), teks itu dipakai apa adanya dan dicocokkan lewat order.id
+   ATAU queueNo (nomor antrian, supaya kasir gampang ketik manual). */
+function extractOrderIdFromScan(text){
+  const raw = String(text || '').trim();
+  const match = raw.match(/ID:\s*(\S+)/i);
+  return match ? match[1] : raw;
+}
+function confirmOrderByCode(rawCode){
+  const code = extractOrderIdFromScan(rawCode);
+  if(!code) return;
+  const order = orders.find(o =>
+    o.status === 'awaiting_scan' &&
+    (o.id === code || o.queueNo.toUpperCase() === code.toUpperCase())
+  );
+  if(!order){
+    // Cek juga: mungkin kode ini valid tapi pesanannya sudah pernah discan sebelumnya
+    const already = orders.find(o => o.id === code || o.queueNo.toUpperCase() === code.toUpperCase());
+    showToast(already ? tt('Pesanan ini sudah pernah discan sebelumnya') : tt('Kode tidak ditemukan / bukan pesanan yang valid'));
+    return;
+  }
+  order.status = 'pending';
+  persistOrders();
+  clearPendingOrderIdIfMatches(order.id);
+  if(orderChannel) orderChannel.postMessage({ type:'order-confirmed', orderId: order.id });
+  closeScanOverlay();
+  renderKasirOrders();
+  showToast(`${tt('Pesanan')} ${order.queueNo} ${tt('diterima & masuk antrean dapur')}`);
 }
 
 /* ---- Notifikasi + suara di sisi Pembeli saat pesanan selesai ---- */
@@ -3836,7 +4587,18 @@ if(orderChannel){
     if(!msg) return;
     if(msg.type === 'new-order'){
       orders.unshift(msg.order);
+      updateAwaitingScanBadge();
       if(!$('#viewKasir').hidden) renderKasirOrders();
+    } else if(msg.type === 'order-confirmed'){
+      const o = orders.find(x=> x.id === msg.orderId);
+      if(o) o.status = 'pending';
+      clearPendingOrderIdIfMatches(msg.orderId);
+      if(!$('#viewKasir').hidden) renderKasirOrders();
+      // Kalau pembeli masih membuka halaman sukses pesanan ini, langsung ganti
+      // ke status "Pesanan Diterima" tanpa perlu reload — mirip auto-deteksi QRIS.
+      if(msg.orderId === currentSuccessOrderId && !$('#viewSuccess').hidden){
+        applySuccessStatus('confirmed');
+      }
     } else if(msg.type === 'order-done'){
       // Sinkronkan status lokal juga, untuk browser tab lain yang membuka Halaman Kasir
       const o = orders.find(x=> x.queueNo === msg.queueNo);
@@ -3864,10 +4626,21 @@ window.addEventListener('storage', (e)=>{
   try{
     const updated = JSON.parse(e.newValue);
     const prevDone = new Set(orders.filter(o=>o.status==='done').map(o=>o.queueNo));
+    const prevAwaiting = new Set(orders.filter(o=>o.status==='awaiting_scan').map(o=>o.id));
     orders = updated;
     orders.forEach(o=>{
       if(o.status==='done' && !prevDone.has(o.queueNo)) handleOrderDoneNotice(o.queueNo);
     });
+    // Kalau pesanan yang sedang ditampilkan di halaman sukses pembeli baru saja
+    // berpindah dari 'awaiting_scan' ke status lain (dikonfirmasi kasir), langsung
+    // update tampilannya — tanpa BroadcastChannel, ini jalur cadangannya (fallback antar tab).
+    if(currentSuccessOrderId && prevAwaiting.has(currentSuccessOrderId)){
+      const o = orders.find(x=> x.id === currentSuccessOrderId);
+      if(o && o.status !== 'awaiting_scan'){
+        clearPendingOrderIdIfMatches(currentSuccessOrderId);
+        if(!$('#viewSuccess').hidden) applySuccessStatus('confirmed');
+      }
+    }
     if(!$('#viewKasir').hidden) renderKasirOrders();
   }catch(err){}
 });
@@ -3988,7 +4761,16 @@ $('#payBtn').addEventListener('click', ()=>{
 
 // Hilangkan tanda error begitu pengguna mulai memperbaiki isian
 $('#inputName').addEventListener('input', ()=> $('#fieldName').classList.remove('invalid'));
-$('#inputPhone').addEventListener('input', ()=> $('#fieldPhone').classList.remove('invalid'));
+$('#inputPhone').addEventListener('input', (e)=>{
+  $('#fieldPhone').classList.remove('invalid');
+  const el = e.target;
+  const cursorFromEnd = el.value.length - el.selectionStart;
+  const digitsOnly = el.value.replace(/\D/g, '').slice(0, 15);
+  const grouped = digitsOnly.replace(/(.{4})(?=.)/g, '$1 ');
+  el.value = grouped;
+  const newPos = Math.max(0, el.value.length - cursorFromEnd);
+  el.setSelectionRange(newPos, newPos);
+});
 $('#inputEmail').addEventListener('input', ()=> $('#fieldEmail').classList.remove('invalid'));
 
 $('#againBtn').addEventListener('click', ()=>{
@@ -4178,6 +4960,187 @@ function removeAvatar(){
   showToast(tt('Foto profil dihapus'));
 }
 
+/* ===================== PENGATURAN: FOTO/VIDEO TAMPILAN DEPAN =====================
+   Dari Profil > Pengaturan, kasir/pemilik warung bisa mengganti ikon cangkir kopi
+   di bagian atas halaman depan dengan foto atau video sendiri. */
+let heroMediaType = 'default'; // 'default' | 'image' | 'video'
+let heroMediaData = null;      // base64 data URL untuk foto/video kustom
+
+function heroMediaHTML(){
+  if(heroMediaType === 'image' && heroMediaData){
+    return `<img src="${heroMediaData}" class="hero-media-custom" alt="Kopi Senja">`;
+  }
+  if(heroMediaType === 'video' && heroMediaData){
+    return `<video src="${heroMediaData}" class="hero-media-custom" autoplay loop muted playsinline></video>`;
+  }
+  return `<div class="cup-wrap"><div class="steam"><span></span><span></span><span></span></div><span class="cup-emoji">☕</span></div>`;
+}
+
+function renderHeroMedia(){
+  const slot = $('#heroMediaSlot');
+  if(slot) slot.innerHTML = heroMediaHTML();
+  const preview = $('#settingsHeroPreview');
+  if(preview) preview.innerHTML = heroMediaHTML();
+}
+
+async function persistHeroMedia(){
+  await storageSet('heroMediaType', heroMediaType);
+  await storageSet('heroMediaData', heroMediaData || '');
+}
+function broadcastHeroMedia(){
+  if(menuChannel) menuChannel.postMessage({ type:'hero-media-updated', heroMediaType, heroMediaData });
+}
+
+$('#settingsHeroMediaInput').addEventListener('change', (e)=>{
+  const file = e.target.files && e.target.files[0];
+  if(!file) return;
+  const isImage = file.type.startsWith('image/');
+  const isVideo = file.type.startsWith('video/');
+  if(!isImage && !isVideo){ showToast(tt('File harus berupa foto atau video')); e.target.value=''; return; }
+  const reader = new FileReader();
+  reader.onload = ()=>{
+    heroMediaType = isImage ? 'image' : 'video';
+    heroMediaData = reader.result;
+    persistHeroMedia();
+    broadcastHeroMedia();
+    renderHeroMedia();
+    showToast(isImage ? tt('Foto tampilan depan diperbarui') : tt('Video tampilan depan diperbarui'));
+  };
+  reader.onerror = ()=> showToast(tt('Gagal membaca file'));
+  reader.readAsDataURL(file);
+  e.target.value = '';
+});
+
+$('#settingsResetHeroBtn').addEventListener('click', ()=>{
+  heroMediaType = 'default';
+  heroMediaData = null;
+  persistHeroMedia();
+  broadcastHeroMedia();
+  renderHeroMedia();
+  showToast(tt('Dikembalikan ke ikon bawaan'));
+});
+
+/* ===================== KUSTOMISASI WARNA WEBSITE =====================
+   Pemilik warung bisa mengganti SEMUA warna inti website — latar belakang,
+   kartu, font (utama & sekunder), aksen (utama, muda, kedua, hijau), garis
+   pembatas, dan teks redup — sesuka hati lewat color picker bawaan browser
+   (jadi SEMUA warna tersedia, tidak dibatasi pilihan preset). Warna disimpan
+   lewat storageSet & disiarkan lewat BroadcastChannel supaya tab lain
+   (termasuk halaman pembeli) ikut berubah tanpa perlu refresh. */
+const THEME_VARS = [
+  { key: 'cream',      cssVar: '--cream' },
+  { key: 'paper',      cssVar: '--paper' },
+  { key: 'espresso',   cssVar: '--espresso' },
+  { key: 'espresso2',  cssVar: '--espresso-2' },
+  { key: 'amber',      cssVar: '--amber' },
+  { key: 'amberLight', cssVar: '--amber-light' },
+  { key: 'cherry',     cssVar: '--cherry' },
+  { key: 'sage',       cssVar: '--sage' },
+  { key: 'line',       cssVar: '--line' },
+  { key: 'muted',      cssVar: '--muted' },
+];
+const DEFAULT_THEME = {
+  cream: '#F6ECDA',
+  paper: '#FFFBF3',
+  espresso: '#2B1B12',
+  espresso2: '#4A3324',
+  amber: '#C17A3E',
+  amberLight: '#E7C393',
+  cherry: '#9C2B3D',
+  sage: '#6E7B58',
+  line: '#E6D6B8',
+  muted: '#8A7A63',
+};
+let themeColors = { ...DEFAULT_THEME };
+
+/* Menempelkan warna terpilih ke CSS custom property di :root — ini yang
+   membuat SELURUH halaman (bukan cuma preview) langsung berubah warnanya,
+   karena semua elemen di file ini sudah dibangun memakai var(--cream) dkk. */
+function applyThemeColors(colors){
+  const root = document.documentElement.style;
+  THEME_VARS.forEach(v=>{
+    if(colors[v.key]) root.setProperty(v.cssVar, colors[v.key]);
+  });
+}
+function syncThemeInputsUI(colors){
+  THEME_VARS.forEach(v=>{
+    const input = $('#color-' + v.key);
+    const swatch = $('#swatch-' + v.key);
+    const hexLabel = $('#hex-' + v.key);
+    if(input) input.value = colors[v.key];
+    if(swatch) swatch.style.background = colors[v.key];
+    if(hexLabel) hexLabel.textContent = colors[v.key].toUpperCase();
+  });
+}
+async function persistThemeColors(){
+  await storageSet('themeColors', JSON.stringify(themeColors));
+}
+function broadcastThemeColors(){
+  if(menuChannel) menuChannel.postMessage({ type:'theme-updated', themeColors });
+}
+
+THEME_VARS.forEach(v=>{
+  const input = $('#color-' + v.key);
+  if(!input) return;
+  input.addEventListener('input', (e)=>{
+    themeColors[v.key] = e.target.value;
+    applyThemeColors(themeColors);
+    syncThemeInputsUI(themeColors);
+  });
+  input.addEventListener('change', ()=>{
+    persistThemeColors();
+    broadcastThemeColors();
+    showToast(tt('Warna website diperbarui'));
+  });
+});
+
+$('#settingsResetThemeBtn').addEventListener('click', ()=>{
+  themeColors = { ...DEFAULT_THEME };
+  applyThemeColors(themeColors);
+  syncThemeInputsUI(themeColors);
+  persistThemeColors();
+  broadcastThemeColors();
+  showToast(tt('Warna dikembalikan ke bawaan'));
+});
+
+/* ---- Gerbang ID Kasir untuk masuk ke Pengaturan ----
+   ID disimpan langsung di kode karena file ini statis tanpa server/database
+   sungguhan. Sama seperti login Kasir, status "sudah masuk" TIDAK disimpan
+   permanen (harus masukkan ID lagi tiap sesi/refresh) supaya HP yang
+   tergeletak tidak otomatis bisa membuka Pengaturan tanpa ID. */
+const SETTINGS_KASIR_ID = '180520071986';
+let settingsUnlocked = false;
+
+$('#rowSettings').addEventListener('click', ()=>{
+  if(settingsUnlocked){
+    renderHeroMedia();
+    syncThemeInputsUI(themeColors);
+    $('#viewSettings').hidden = false;
+  } else {
+    $('#settingsIdInput').value = '';
+    $('#fieldSettingsId').classList.remove('invalid');
+    $('#viewSettingsLogin').hidden = false;
+  }
+});
+$('#settingsLoginBtn').addEventListener('click', ()=>{
+  const id = $('#settingsIdInput').value.trim();
+  if(id !== SETTINGS_KASIR_ID){
+    $('#fieldSettingsId').classList.add('invalid');
+    return;
+  }
+  $('#fieldSettingsId').classList.remove('invalid');
+  settingsUnlocked = true;
+  $('#viewSettingsLogin').hidden = true;
+  renderHeroMedia();
+  syncThemeInputsUI(themeColors);
+  $('#viewSettings').hidden = false;
+});
+$('#settingsIdInput').addEventListener('keydown', (e)=>{
+  if(e.key === 'Enter'){ e.preventDefault(); $('#settingsLoginBtn').click(); }
+});
+$('#backFromSettingsLogin').addEventListener('click', ()=> $('#viewSettingsLogin').hidden = true);
+$('#backFromSettings').addEventListener('click', ()=> $('#viewSettings').hidden = true);
+
 /* ===================== RIWAYAT PESANAN ===================== */
 let orderHistory = [];
 async function persistHistory(){ await storageSet('orderHistory', JSON.stringify(orderHistory)); }
@@ -4236,21 +5199,93 @@ function openHelp(){
   $('#viewHelp').hidden = false;
 }
 
-/* ===================== JAM OPERASIONAL ===================== */
-// Buka setiap hari, jam sama, termasuk Sabtu & Minggu (tidak ada jam khusus weekend).
-const OPENING_HOURS = '07.00 – 22.00';
+/* ===================== JAM & STATUS OPERASIONAL ===================== */
+// Jam & status buka/tutup diatur langsung oleh kasir di tab "Jam Operasional".
+// Sama tiap hari (Senin–Minggu, termasuk Sabtu & Minggu) — tidak ada jam khusus weekend.
+let shopOpen = true;
+let shopOpenTime = '07:00';  // format HH:MM, dipakai <input type="time">
+let shopCloseTime = '22:00';
 const DAY_NAMES = { 1:'Senin', 2:'Selasa', 3:'Rabu', 4:'Kamis', 5:'Jumat', 6:'Sabtu', 0:'Minggu' };
 const DAY_ORDER = [1,2,3,4,5,6,0]; // Senin ... Minggu, Sabtu & Minggu tetap tercantum dengan jam yang sama
+
+function formatHourDot(t){ return (t||'').replace(':','.'); }
+function currentHoursLabel(){ return `${formatHourDot(shopOpenTime)} – ${formatHourDot(shopCloseTime)}`; }
+
+async function persistShopStatus(){
+  await storageSet('shopOpen', shopOpen ? '1' : '0');
+  await storageSet('shopOpenTime', shopOpenTime);
+  await storageSet('shopCloseTime', shopCloseTime);
+}
+function broadcastShopStatus(){
+  if(menuChannel) menuChannel.postMessage({ type:'shop-status-updated', shopOpen, shopOpenTime, shopCloseTime });
+}
+
+// Menampilkan status buka/tutup di kartu info depan (dekat "Warkop Senja")
+function renderInfoCardStatus(){
+  const hoursEl = $('#infoCardHoursText');
+  const badge = $('#closeBadge');
+  const card = $('#infoCard');
+  if(hoursEl){
+    hoursEl.textContent = shopOpen
+      ? `${tt('Buka hari ini')}, ${currentHoursLabel()}`
+      : tt('Tutup sementara');
+  }
+  if(badge) badge.hidden = shopOpen;
+  if(card) card.classList.toggle('is-closed', !shopOpen);
+}
+
+// Panel kasir untuk atur jam & tombol buka/tutup
+function renderKasirHoursPane(){
+  const statusText = $('#kasirShopStatusText');
+  const toggleBtn = $('#kasirToggleOpenBtn');
+  if(statusText){
+    statusText.textContent = shopOpen ? tt('Buka') : tt('Tutup');
+    statusText.classList.toggle('is-open', shopOpen);
+    statusText.classList.toggle('is-closed', !shopOpen);
+  }
+  if(toggleBtn){
+    toggleBtn.textContent = shopOpen ? tt('Tutup Warung') : tt('Buka Warung');
+    toggleBtn.classList.toggle('act-close', shopOpen);
+    toggleBtn.classList.toggle('act-open', !shopOpen);
+  }
+  if($('#kasirOpenTimeInput')) $('#kasirOpenTimeInput').value = shopOpenTime;
+  if($('#kasirCloseTimeInput')) $('#kasirCloseTimeInput').value = shopCloseTime;
+}
+
+$('#kasirToggleOpenBtn').addEventListener('click', ()=>{
+  shopOpen = !shopOpen;
+  persistShopStatus();
+  broadcastShopStatus();
+  renderKasirHoursPane();
+  renderInfoCardStatus();
+  showToast(shopOpen ? tt('Warung ditandai Buka') : tt('Warung ditandai Tutup'));
+});
+
+$('#kasirSaveHoursBtn').addEventListener('click', ()=>{
+  const openVal = $('#kasirOpenTimeInput').value;
+  const closeVal = $('#kasirCloseTimeInput').value;
+  if(!openVal || !closeVal){
+    showToast(tt('Isi jam buka dan jam tutup dulu'));
+    return;
+  }
+  shopOpenTime = openVal;
+  shopCloseTime = closeVal;
+  persistShopStatus();
+  broadcastShopStatus();
+  renderInfoCardStatus();
+  showToast(tt('Jam operasional disimpan'));
+});
 
 function renderHoursPage(){
   const body = $('#hoursBody');
   const todayIdx = new Date().getDay();
   body.innerHTML = `
+    ${!shopOpen?`<div class="hours-note" style="color:var(--cherry); font-weight:700;">${tt('Warung sedang tutup sementara.')}</div>`:''}
     <div class="hours-list">${DAY_ORDER.map(d=>{
       const isToday = d === todayIdx;
       return `<div class="hours-row${isToday?' today':''}">
         <span>${tt(DAY_NAMES[d])}${isToday?`<span class="hd-today-badge">${tt('Hari ini')}</span>`:''}</span>
-        <span class="hd-time">${OPENING_HOURS}</span>
+        <span class="hd-time">${currentHoursLabel()}</span>
       </div>`;
     }).join('')}</div>
     <div class="hours-note">${tt('Buka setiap hari termasuk Sabtu & Minggu, dengan jam operasional yang sama — tidak ada jam khusus akhir pekan.')}</div>
@@ -4303,6 +5338,31 @@ async function init(){
     try{ applyMenuOverrides(JSON.parse(savedMenuOverrides)); }catch(e){}
   }
 
+  // Muat status buka/tutup & jam operasional SEBELUM kartu info digambar,
+  // supaya pembeli langsung melihat status terbaru sejak halaman pertama kali dibuka.
+  const savedShopOpen = await storageGet('shopOpen');
+  if(savedShopOpen !== null && savedShopOpen !== undefined && savedShopOpen !== '') shopOpen = savedShopOpen === '1';
+  const savedShopOpenTime = await storageGet('shopOpenTime');
+  if(savedShopOpenTime) shopOpenTime = savedShopOpenTime;
+  const savedShopCloseTime = await storageGet('shopCloseTime');
+  if(savedShopCloseTime) shopCloseTime = savedShopCloseTime;
+  renderInfoCardStatus();
+
+  // Muat foto/video kustom tampilan depan (jika kasir pernah mengganti dari ikon bawaan)
+  const savedHeroMediaType = await storageGet('heroMediaType');
+  if(savedHeroMediaType) heroMediaType = savedHeroMediaType;
+  const savedHeroMediaData = await storageGet('heroMediaData');
+  if(savedHeroMediaData) heroMediaData = savedHeroMediaData;
+  renderHeroMedia();
+
+  // Muat warna website kustom (jika kasir pernah mengganti dari warna bawaan)
+  const savedThemeColors = await storageGet('themeColors');
+  if(savedThemeColors){
+    try{ themeColors = { ...DEFAULT_THEME, ...JSON.parse(savedThemeColors) }; }catch(e){ themeColors = { ...DEFAULT_THEME }; }
+  }
+  applyThemeColors(themeColors);
+  syncThemeInputsUI(themeColors);
+
   renderTabs();
   renderMenu();
   renderTableChip();
@@ -4348,6 +5408,7 @@ async function init(){
   if(savedOrders){
     try{ orders = JSON.parse(savedOrders); }catch(e){ orders = []; }
   }
+  updateAwaitingScanBadge();
 
   const savedQueueCounter = await storageGet('queueCounter');
   const savedQueueDate = await storageGet('queueDate');
@@ -4368,6 +5429,27 @@ async function init(){
 
   renderTableChip();
   renderCartBar();
+
+  // Pulihkan halaman QR pesanan kalau masih ada pesanan yang BELUM discan
+  // kasir — supaya QR tidak hilang cuma karena halaman ditutup/dimuat ulang.
+  // Baru berhenti ditampilkan otomatis setelah kasir benar-benar men-scan-nya.
+  try{
+    const pendingId = await storageGet('pendingOrderId');
+    if(pendingId){
+      const pendingOrder = orders.find(o=> o.id === pendingId);
+      if(pendingOrder && pendingOrder.status === 'awaiting_scan'){
+        $('#queueNo').textContent = pendingOrder.queueNo;
+        currentQueueNo = pendingOrder.queueNo;
+        currentSuccessOrderId = pendingOrder.id;
+        renderOrderQr(pendingOrder);
+        applySuccessStatus('awaiting');
+        $('#viewSuccess').hidden = false;
+      } else {
+        // Pesanan sudah discan/selesai (atau sudah tidak ada) — bersihkan penanda lama
+        storageSet('pendingOrderId', '');
+      }
+    }
+  }catch(e){}
 }
 init();
 </script>
