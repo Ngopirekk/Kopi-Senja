@@ -6131,33 +6131,18 @@ async function init(){
   renderTableChip();
   renderCartBar();
 
-  // Pulihkan halaman sukses kalau masih ada pesanan yang BELUM dikonfirmasi
-  // kasir (belum discan, ATAU pembayaran online belum diverifikasi) — supaya
-  // statusnya tidak hilang cuma karena halaman ditutup/dimuat ulang. Baru
-  // berhenti ditampilkan otomatis setelah kasir benar-benar mengonfirmasinya.
+  // Catatan status pesanan yang masih menunggu (belum discan/diverifikasi kasir)
+  // TETAP dilacak di latar belakang (dipakai tautan "Ada QR yang belum
+  // selesai?" & auto-update saat kasir mengonfirmasi), TAPI halaman yang
+  // tampil saat web dibuka/dimuat ulang SELALU halaman menu biasa — QR/halaman
+  // menunggu TIDAK lagi otomatis muncul sendiri seperti sebelumnya.
   try{
     const pendingId = await storageGet('pendingOrderId');
     if(pendingId){
       const pendingOrder = orders.find(o=> o.id === pendingId);
-      if(pendingOrder && pendingOrder.status === 'awaiting_scan'){
-        $('#queueNo').textContent = pendingOrder.queueNo;
+      if(pendingOrder && (pendingOrder.status === 'awaiting_scan' || pendingOrder.status === 'awaiting_payment_verification')){
         currentQueueNo = pendingOrder.queueNo;
         currentSuccessOrderId = pendingOrder.id;
-        renderOrderQr(pendingOrder);
-        applySuccessStatus('awaiting');
-        $('#viewSuccess').hidden = false;
-      } else if(pendingOrder && pendingOrder.status === 'awaiting_payment_verification'){
-        // Bayar Online yang belum dikonfirmasi: tampilkan lagi halaman QRIS
-        // (bukan halaman sukses) supaya pembeli masih bisa scan/simpan QRIS-nya,
-        // dan tetap menunggu otomatis — persis kondisi sebelum halaman ditutup.
-        $('#queueNo').textContent = pendingOrder.queueNo;
-        currentQueueNo = pendingOrder.queueNo;
-        currentSuccessOrderId = pendingOrder.id;
-        $('#qrisAmount').textContent = rupiah(pendingOrder.total);
-        $('#qrisSaveBtn').href = $('.qris-img').src;
-        $('#qrisWaiting').hidden = false;
-        startQrisCountdown();
-        $('#viewQris').hidden = false;
       } else {
         // Pesanan sudah dikonfirmasi/selesai (atau sudah tidak ada) — bersihkan penanda lama
         storageSet('pendingOrderId', '');
@@ -6169,3 +6154,4 @@ init();
 </script>
 </body>
 </html>
+
