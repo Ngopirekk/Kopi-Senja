@@ -488,7 +488,7 @@
     display:flex; align-items:center; justify-content:center; padding:20px;
   }
   .scan-box{
-    background:var(--paper); border-radius:18px; padding:20px 18px; width:100%; max-width:320px;
+    background:var(--paper); border-radius:18px; padding:20px 18px; width:100%; max-width:260px;
     box-shadow:0 24px 50px -18px rgba(43,27,18,0.55); max-height:88vh; overflow-y:auto;
   }
   .scan-box .klb-top{ display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
@@ -498,7 +498,7 @@
   }
   .scan-box .kasir-hint{ text-align:left; margin-bottom:12px; padding:10px 12px; font-size:11px; }
   #scanReader{
-    border-radius:12px; overflow:hidden; background:#000; margin-bottom:12px; min-height:200px;
+    border-radius:12px; overflow:hidden; background:#000; margin-bottom:12px; min-height:140px;
   }
   .scan-cam-controls{ display:flex; gap:8px; margin:-4px 0 12px; }
   .scan-cam-btn{
@@ -517,6 +517,12 @@
     font-weight:700; font-size:12.5px; padding:0 16px; cursor:pointer;
   }
   .scan-fallback-note{ font-size:10.5px; color:var(--muted); text-align:center; margin-top:8px; line-height:1.5; }
+  /* Bagian Senter/Ganti Kamera, input kode manual, dan catatan di bawahnya
+     sengaja disembunyikan permanen dari tampilan Scan QR Pesanan — elemennya
+     tetap ada di HTML (supaya skrip kamera tidak error), tapi tidak lagi terlihat. */
+  .scan-cam-controls, .scan-manual-label, .scan-manual-row, .scan-fallback-note{
+    display:none !important;
+  }
 
   /* ---------- QR PESANAN (halaman sukses, sisi pembeli) ---------- */
   .order-qr-box{
@@ -1080,6 +1086,10 @@
     border:1px solid var(--line);
     color:var(--espresso-2); font-size:12.5px; font-weight:600;
   }
+  /* Badge "Menunggu verifikasi kasir..." di halaman QRIS sengaja disembunyikan
+     permanen — elemennya (#qrisWaiting) tetap ada supaya skrip yang
+     menampilkan/menyembunyikannya tidak error, tapi tidak lagi terlihat. */
+  #qrisWaiting{ display:none !important; }
   .qris-waiting-dot{
     width:9px; height:9px; border-radius:50%;
     background:var(--sage); flex:none;
@@ -1094,6 +1104,14 @@
     padding:12px 22px; font-family:'JetBrains Mono', monospace; font-size:20px; font-weight:700; color:var(--espresso-2);
   }
   .queue small{ display:block; font-family:'Work Sans', sans-serif; font-size:10px; font-weight:600; color:var(--muted); letter-spacing:1px; }
+  /* Tampilan "minimal": dipakai saat halaman sukses HANYA menampilkan nomor
+     antrian (status sudah dikonfirmasi kasir) — kartu putih & bayangannya
+     dihilangkan, dan latar gelap di belakangnya juga dibuat transparan,
+     supaya yang terlihat cuma kotak nomor antrian + tombol X mengambang. */
+  #viewSuccess.success-minimal-bg{ background:transparent; }
+  #viewSuccess .success-body.success-body--minimal{
+    background:transparent; box-shadow:none; padding:34px 6px 6px;
+  }
   .again-btn{
     margin-top:26px; border:none; background:var(--espresso); color:var(--amber-light); font-weight:700;
     padding:13px 26px; border-radius:12px; cursor:pointer; font-size:13px;
@@ -1770,8 +1788,6 @@
         <p data-i18n="QRIS sudah kedaluwarsa. Perbarui untuk melanjutkan.">QRIS sudah kedaluwarsa. Perbarui untuk melanjutkan.</p>
         <button id="qrisRefreshBtn" data-i18n="Perbarui QRIS">Perbarui QRIS</button>
       </div>
-
-      <p class="qris-hint" data-i18n="Scan QRIS ini pakai aplikasi e-wallet atau m-banking kamu, lalu selesaikan pembayarannya di sana. Halaman ini otomatis lanjut begitu kasir mengonfirmasi dana diterima — tidak perlu menekan apa pun.">Scan QRIS ini pakai aplikasi e-wallet atau m-banking kamu, lalu selesaikan pembayarannya di sana. Halaman ini otomatis lanjut begitu kasir mengonfirmasi dana diterima — tidak perlu menekan apa pun.</p>
     </div>
     <div class="pay-footer">
       <div class="qris-waiting" id="qrisWaiting" hidden>
@@ -1810,7 +1826,6 @@
         <span class="klb-title" data-i18n="Scan QR Pesanan">Scan QR Pesanan</span>
         <button class="klb-close" id="closeScanBtn" aria-label="Tutup">✕</button>
       </div>
-      <div class="kasir-hint" data-i18n="Arahkan kamera ke QR yang ditunjukkan pembeli. Pesanan otomatis masuk ke antrean setelah QR terbaca.">Arahkan kamera ke QR yang ditunjukkan pembeli. Pesanan otomatis masuk ke antrean setelah QR terbaca.</div>
       <div id="scanReader"></div>
       <div class="scan-cam-controls" id="scanCamControls" hidden>
         <button type="button" class="scan-cam-btn" id="toggleTorchBtn" hidden>🔦 <span data-i18n="Senter">Senter</span></button>
@@ -4524,35 +4539,54 @@ function applySuccessStatus(state){
   const hint = $('#sentToKasirHint');
   const waitBadge = $('#scanWaitingBadge');
   const qrBox = $('.order-qr-box');
+  const queueBox = $('.queue');
+  const successBody = $('.success-body');
+  const successView = $('#viewSuccess');
   // Ikon, judul, deskripsi, hint, dan badge menunggu sengaja disembunyikan permanen —
   // halaman sukses hanya menampilkan nomor antrian, QR, dan ringkasan pesanan.
   if(state === 'awaiting'){
     // Bayar di Kasir: belum discan kasir — tampilkan QR untuk ditunjukkan ke kasir.
+    // Nomor antrian sengaja disembunyikan di status ini — yang tampil cuma QR,
+    // ringkasan total, dan tombol tutup (✕).
     icon.textContent = '⏳';
     icon.classList.add('waiting');
     title.textContent = tt('Menunggu Dikonfirmasi Kasir');
     desc.textContent = tt('Pesananmu sudah dibuat. Tunjukkan QR di bawah ke kasir untuk mulai diproses.');
     hint.textContent = tt('Kode ini referensi khusus pesananmu untuk kasir. Halaman ini otomatis lanjut begitu kasir men-scan QR-nya.');
     if(qrBox) qrBox.hidden = false;
+    if(queueBox) queueBox.hidden = true;
+    if(successBody) successBody.classList.remove('success-body--minimal');
+    if(successView) successView.classList.remove('success-minimal-bg');
   } else if(state === 'awaiting_payment'){
     // Bayar Online (QRIS): sudah ditekan "Saya Sudah Bayar" tapi kasir BELUM
     // mengonfirmasi dana benar-benar diterima. QR pesanan tetap ditampilkan
     // (sama seperti alur Bayar di Kasir) supaya kasir bisa langsung men-scan-nya
     // sebagai jalan pintas konfirmasi setelah mengecek dana masuk — lihat
     // confirmOrderByCode yang sekarang menerima kode dari status ini juga.
+    // Nomor antrian juga disembunyikan di status ini, sama seperti 'awaiting'.
     icon.textContent = '⏳';
     icon.classList.add('waiting');
     title.textContent = tt('Menunggu Verifikasi Pembayaran');
     desc.textContent = tt('Terima kasih! Kasir sedang memeriksa pembayaran QRIS-mu. Pesanan baru masuk ke antrean dapur setelah pembayaran dikonfirmasi diterima.');
     hint.textContent = tt('Tunjukkan QR di bawah ke kasir untuk mempercepat konfirmasi. Halaman ini otomatis lanjut begitu kasir mengonfirmasi pembayaranmu diterima.');
     if(qrBox) qrBox.hidden = false;
+    if(queueBox) queueBox.hidden = true;
+    if(successBody) successBody.classList.remove('success-body--minimal');
+    if(successView) successView.classList.remove('success-minimal-bg');
   } else {
+    // Sudah dikonfirmasi kasir: QR tidak lagi diperlukan, dan supaya halaman
+    // tidak menampilkan kartu putih besar untuk konten yang cuma nomor antrian,
+    // kartu & latar belakang gelapnya dibuat transparan — yang tersisa cuma
+    // kotak nomor antrian mengambang dan tombol tutup (✕).
     icon.textContent = '✓';
     icon.classList.remove('waiting');
     title.textContent = tt('Pesanan Diterima');
     desc.textContent = tt('Terima kasih! Kopi dan camilanmu sedang diseduh & disiapkan barista. Ambil nomor antrianmu di meja.');
     hint.textContent = tt('Pesanan sudah diterima kasir dan masuk ke antrean dapur. Kamu akan mendapat notifikasi begitu pesanan siap diambil.');
     if(qrBox) qrBox.hidden = true;
+    if(queueBox) queueBox.hidden = false;
+    if(successBody) successBody.classList.add('success-body--minimal');
+    if(successView) successView.classList.add('success-minimal-bg');
   }
   icon.hidden = true;
   title.hidden = true;
@@ -4893,12 +4927,12 @@ $('#openScanBtn').addEventListener('click', openScanOverlay);
 $('#closeScanBtn').addEventListener('click', closeScanOverlay);
 
 /* Area kotak pemindaian dibuat MENGIKUTI ukuran video kamera (bukan angka
-   tetap), dan diperbesar sampai 85% dari sisi terpendek layar kamera —
-   makin besar area target, makin gampang & cepat QR pesanan (yang sekarang
-   padat karena isinya rincian menu+total) berhasil terbaca. */
+   tetap), tapi sekarang dibuat lebih KECIL (55% dari sisi terpendek, maksimal
+   200px) sesuai permintaan — supaya kotak target QR tidak lagi memenuhi
+   hampir seluruh lebar layar kamera. */
 function computeQrBox(viewfinderWidth, viewfinderHeight){
   const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
-  const size = Math.floor(Math.min(minEdge * 0.85, 320));
+  const size = Math.floor(Math.min(minEdge * 0.55, 200));
   return { width: size, height: size };
 }
 
