@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+
+<html lang="id">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Kopi Senja — Pesan di Meja</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700;9..144,900&amp;family=Work+Sans:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@500;700&amp;family=Playfair+Display:wght@700;800&amp;family=Poppins:wght@500;600;700&amp;family=Pacifico&amp;family=Caveat:wght@600;700&amp;display=swap" rel="stylesheet"/>
+<!-- Google Identity Services (Sign In With Google) — resmi dari Google, dipakai untuk login Google asli -->
+<script async="" defer="" src="https://accounts.google.com/gsi/client"></script>
+<!-- Pembuat QR Code (untuk QR pesanan pembeli) & pembaca QR Code lewat kamera (untuk halaman Kasir) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+<!-- Firebase (Realtime Database) — dipakai supaya data pesanan tersinkron NYATA
+     antar perangkat berbeda (HP pembeli vs HP/tablet kasir), sesuatu yang TIDAK
+     bisa dilakukan localStorage/BroadcastChannel saja (itu cuma jalan dalam satu
+     browser/perangkat yang sama). Lihat blok inisialisasi Firebase di bagian
+     <script> utama untuk detail & fallback kalau internet/Firebase tidak tersedia. -->
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
+<!-- Firebase Cloud Messaging — dipakai supaya pembeli tetap menerima notifikasi
+     "pesanan siap" di layar HP walau website/tab sudah ditutup total (push
+     notification asli), bukan cuma notifikasi selagi tab masih terbuka.
+     Butuh file firebase-messaging-sw.js di folder yang sama dengan file ini
+     agar berfungsi — lihat catatan PUSH NOTIFICATION di bagian <script> utama. -->
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-messaging-compat.js"></script>
+
+
+<link href="styles.css" rel="stylesheet"/></head>
+<body>
+<div class="app" id="app">
+<!-- ===== Cookie Consent Banner ===== -->
+<div class="cookie-banner" id="cookieBanner">
+<h2>About Cookies On This Site</h2>
+<p>
+        We use cookies to remember your cart, table number, and preferences
+        for a smoother ordering experience. See our <a href="#" onclick="return false;">Cookie Policy</a>.
+      </p>
+<span class="cookie-manage-link" onclick="toggleCookieSettings()">Manage cookies</span>
+<div class="cookie-settings" id="cookieSettingsPanel">
+<div class="cookie-toggle-row">
+<span>Essential Cookies (required)</span>
+<input checked="" disabled="" type="checkbox"/>
+</div>
+<div class="cookie-toggle-row">
+<span>Analytics Cookies</span>
+<input checked="" id="cookieAnalytics" type="checkbox"/>
+</div>
+<div class="cookie-toggle-row">
+<span>Marketing Cookies</span>
+<input checked="" id="cookieMarketing" type="checkbox"/>
+</div>
+<button class="cookie-btn secondary" onclick="saveCookieSettings()">Save Settings</button>
+</div>
+<button class="cookie-btn" onclick="acceptAllCookies()">Accept all cookies</button>
+<button class="cookie-btn secondary" onclick="rejectOptionalCookies()">Reject optional cookies</button>
+</div>
+<!-- ===== MENU VIEW ===== -->
+<div id="viewMenu">
+<header class="hero">
+<div class="hero-media-bg" id="heroMediaBg"></div>
+<div class="hero-top">
+<button class="icon-btn" id="exitBtn">✕</button>
+<div class="hero-actions">
+<button class="icon-btn" id="searchBtn"><svg fill="none" height="15" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" viewbox="0 0 24 24" width="15">
+<circle cx="11" cy="11" r="8"></circle>
+<line x1="21" x2="16.65" y1="21" y2="16.65"></line>
+</svg></button>
+<button class="icon-btn" id="menuBtn">☰</button>
+</div>
+</div>
+<div class="hero-brand">
+<div id="heroMediaSlot">
+<div class="cup-wrap">
+<div class="steam"><span></span><span></span><span></span></div>
+<span class="cup-emoji">☕</span>
+</div>
+</div>
+<h1 id="heroBrandTitle">Kopi Senja</h1>
+<p id="heroBrandTagline">NGOPI SANTAI, CERITA BERLANJUT</p>
+</div>
+<div class="bean-row">· · ·</div>
+</header>
+<div class="info-card" id="infoCard">
+<div>
+<span class="name">Warkop Senja<span class="close-badge" hidden="" id="closeBadge">Close</span></span>
+<span class="hours" data-i18n="Buka hari ini, 07.00–22.00" id="infoCardHoursText">Buka hari ini,
+            07.00–22.00</span>
+</div>
+<span class="chev">›</span>
+</div>
+<div class="table-chip" id="tableChip"></div>
+<nav class="tabs" id="tabs"></nav>
+<main class="menu" id="menuContent"></main>
+</div>
+<!-- ===== CART BAR ===== -->
+<div class="cart-bar" hidden="" id="cartBar" role="button" tabindex="0">
+<button class="basket" id="cartBasketBtn" type="button">🧺<span class="badge" id="cartCount">0</span></button>
+<span class="cart-total"><small data-i18n="Total">Total</small><b id="cartTotal">Rp0</b></span>
+<span class="checkout-label" data-i18n="Lanjut Bayar →">Lanjut Bayar →</span>
+</div>
+<!-- ===== MINI KERANJANG (buka cepat dari ikon keranjang, bisa hapus pesanan di sini) ===== -->
+<div class="sheet-overlay" hidden="" id="miniCartOverlay">
+<div class="sheet mini-cart-sheet">
+<div class="mini-cart-head">
+<span data-i18n="Keranjang">Keranjang</span>
+<button class="close" id="closeMiniCart" type="button">✕</button>
+</div>
+<div class="sheet-scroll mini-cart-scroll" id="miniCartLines"></div>
+<div class="sheet-footer">
+<div class="total-order-row">
+<span class="t" data-i18n="Total Bayar">Total Bayar</span>
+<b id="miniCartTotal">Rp0</b>
+</div>
+<button class="cta" id="miniCartCheckoutBtn" type="button">
+<span data-i18n="Lanjut Bayar">Lanjut Bayar</span> <span>→</span>
+</button>
+</div>
+</div>
+</div>
+<!-- ===== PANEL PENCARIAN MENU ===== -->
+<div class="view-page" hidden="" id="viewSearch">
+<div class="page-top">
+<button id="closeSearch">←</button>
+<div class="search-input-wrap">
+<span class="search-ic"><svg fill="none" height="14" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" viewbox="0 0 24 24" width="14">
+<circle cx="11" cy="11" r="8"></circle>
+<line x1="21" x2="16.65" y1="21" y2="16.65"></line>
+</svg></span>
+<input data-i18n-placeholder="Cari kopi, camilan, paket..." id="searchInput" placeholder="Cari kopi, camilan, paket..." type="text"/>
+<button class="clear-search-btn" hidden="" id="clearSearch">✕</button>
+</div>
+</div>
+<div class="page-body" id="searchResults"></div>
+</div>
+<!-- ===== PROFILE ===== -->
+<div class="view-page" hidden="" id="viewProfile">
+<div class="page-top">
+<button id="closeProfile">←</button>
+<h3 data-i18n="Profile">Profile</h3>
+<div class="role-switch" id="roleSwitch"></div>
+</div>
+<div class="page-body">
+<div class="profile-card" id="profileCard"></div>
+<input accept="image/*" hidden="" id="avatarFileInput" type="file"/>
+<div class="avatar-viewer-overlay" hidden="" id="avatarViewerOverlay">
+<div class="avatar-viewer-box">
+<button aria-label="Tutup" class="avatar-viewer-close" id="avatarViewerClose" type="button">✕</button>
+<img alt="Foto profil" class="avatar-viewer-img" id="avatarViewerImg" src=""/>
+<div class="avatar-viewer-actions">
+<label class="avatar-viewer-btn" data-i18n="Ganti Foto" for="avatarFileInput">Ganti Foto</label>
+<button class="avatar-viewer-btn avatar-viewer-btn--danger" data-i18n="Hapus Foto" id="avatarViewerDeleteBtn" type="button">Hapus Foto</button>
+</div>
+</div>
+</div>
+<div class="profile-menu">
+<button class="profile-row" id="rowOrderHistory">
+<span class="pr-ic">🧾</span><span class="pr-label" data-i18n="Riwayat Pesanan">Riwayat Pesanan</span><span class="pr-chev">›</span>
+</button>
+<button class="profile-row" id="rowLanguage">
+<span class="pr-ic">🌐</span><span class="pr-label" data-i18n="Bahasa">Bahasa</span><span class="pr-chev">›</span>
+</button>
+<!-- Menu "Pengaturan" (khusus staf/pemilik) sengaja tidak ditampilkan
+               di web pembeli lagi — sekarang cuma ada di kasir.html.
+               Tombolnya disembunyikan (hidden), bukan dihapus totalnya dari kode,
+               supaya event listener yang menunjuk ke #rowSettings di bagian
+               <script> bawah tidak error. -->
+<button class="profile-row" hidden="" id="rowSettings">
+<span class="pr-ic">⚙️</span><span class="pr-label" data-i18n="Pengaturan">Pengaturan</span><span class="pr-chev">›</span>
+</button>
+<button class="profile-row" id="rowHelp">
+<span class="pr-ic">🛟</span><span class="pr-label" data-i18n="Bantuan">Bantuan</span><span class="pr-chev">›</span>
+</button>
+</div>
+</div>
+</div>
+<!-- ===== PENGATURAN (GANTI FOTO/VIDEO TAMPILAN DEPAN) ===== -->
+<div class="view-page" hidden="" id="viewSettings">
+<div class="page-top">
+<button id="backFromSettings">←</button>
+<h3 data-i18n="Pengaturan">Pengaturan</h3>
+</div>
+<div class="page-body">
+<div class="settings-section-title">🖼️ <span data-i18n="Latar Belakang Banner">Latar Belakang
+            Banner</span></div>
+<div class="settings-hero-preview" id="settingsHeroPreview"></div>
+<div class="settings-hero-actions">
+<label class="settings-media-btn" for="settingsHeroMediaInput">🖼️ <span data-i18n="Ganti Foto/Video">Ganti
+              Foto/Video</span></label>
+<input accept="image/*,video/*" hidden="" id="settingsHeroMediaInput" type="file"/>
+<button class="settings-media-reset-btn" data-i18n="Kembalikan ke Latar Coklat Bawaan" id="settingsResetHeroBtn" type="button">Kembalikan ke Latar Coklat Bawaan</button>
+</div>
+<div class="brand-text-field">
+<label data-i18n="Ukuran Gambar/Video" for="heroSizeRange">Ukuran Gambar/Video</label>
+<div class="brand-size-row">
+<input id="heroSizeRange" max="220" min="50" step="5" type="range" value="100"/>
+<span class="brand-size-value" id="heroSizeValue">100%</span>
+</div>
+</div>
+<div class="brand-text-field">
+<label data-i18n="Posisi Kiri ⟷ Kanan" for="heroPosXRange">Posisi Kiri ⟷ Kanan</label>
+<div class="brand-size-row">
+<input id="heroPosXRange" max="60" min="-60" step="2" type="range" value="0"/>
+<span class="brand-size-value" id="heroPosXValue">0px</span>
+</div>
+</div>
+<div class="brand-text-field">
+<label data-i18n="Posisi Atas ⟷ Bawah" for="heroPosYRange">Posisi Atas ⟷ Bawah</label>
+<div class="brand-size-row">
+<input id="heroPosYRange" max="60" min="-60" step="2" type="range" value="0"/>
+<span class="brand-size-value" id="heroPosYValue">0px</span>
+</div>
+</div>
+<button class="brand-reset-btn" data-i18n="Kembalikan Ukuran &amp; Posisi Bawaan" id="settingsResetHeroTransformBtn" type="button">Kembalikan Ukuran &amp; Posisi Bawaan</button>
+<div class="settings-section-title">☕ <span data-i18n="Ikon Cangkir">Ikon Cangkir</span></div>
+<label class="kasir-auto-toggle-row" style="display:flex;align-items:center;gap:8px;margin:4px 0 12px;font-size:14px;">
+<input checked="" id="heroIconVisibleToggle" type="checkbox"/>
+<span data-i18n="Tampilkan ikon cangkir di banner">Tampilkan ikon cangkir di banner</span>
+</label>
+<div class="settings-hero-preview" id="settingsIconPreview"></div>
+<div class="settings-hero-actions">
+<label class="settings-media-btn" for="settingsIconMediaInput">🖼️ <span data-i18n="Ganti Foto/Video">Ganti
+              Foto/Video</span></label>
+<input accept="image/*,video/*" hidden="" id="settingsIconMediaInput" type="file"/>
+<button class="settings-media-reset-btn" data-i18n="Kembalikan ke Ikon Cangkir Bawaan" id="settingsResetIconBtn" type="button">Kembalikan ke Ikon Cangkir Bawaan</button>
+</div>
+<div class="settings-section-title">🔤 <span data-i18n="Teks &amp; Font Nama Toko">Teks &amp; Font Nama
+            Toko</span></div>
+<label class="kasir-auto-toggle-row" style="display:flex;align-items:center;gap:8px;margin:4px 0 12px;font-size:14px;">
+<input checked="" id="brandTextVisibleToggle" type="checkbox"/>
+<span data-i18n="Tampilkan nama toko &amp; slogan di banner">Tampilkan nama toko &amp; slogan di banner</span>
+</label>
+<div class="brand-text-field">
+<label data-i18n="Tulisan Nama Toko" for="brandTextInput">Tulisan Nama Toko</label>
+<input class="brand-text-input" id="brandTextInput" maxlength="30" placeholder="Kopi Senja" type="text"/>
+</div>
+<div class="brand-text-field">
+<label data-i18n="Tulisan Slogan (di bawah nama toko)" for="brandTaglineInput">Tulisan Slogan (di bawah nama
+            toko)</label>
+<input class="brand-text-input" id="brandTaglineInput" maxlength="60" placeholder="NGOPI SANTAI, CERITA BERLANJUT" type="text"/>
+</div>
+<div class="brand-text-field">
+<label data-i18n="Jenis Font" for="brandFontSelect">Jenis Font</label>
+<select class="brand-font-select" id="brandFontSelect">
+<option value="Fraunces">Fraunces (bawaan)</option>
+<option value="Work Sans">Work Sans</option>
+<option value="Playfair Display">Playfair Display</option>
+<option value="Poppins">Poppins</option>
+<option value="Pacifico">Pacifico</option>
+<option value="Caveat">Caveat</option>
+<option value="JetBrains Mono">JetBrains Mono</option>
+<option value="Georgia, serif">Georgia (bawaan HP/laptop)</option>
+<option value="Arial, sans-serif">Arial (bawaan HP/laptop)</option>
+</select>
+</div>
+<div class="brand-text-field">
+<label data-i18n="Ukuran Tulisan" for="brandSizeRange">Ukuran Tulisan</label>
+<div class="brand-size-row">
+<input id="brandSizeRange" max="48" min="18" step="1" type="range" value="30"/>
+<span class="brand-size-value" id="brandSizeValue">30px</span>
+</div>
+</div>
+<button class="brand-reset-btn" data-i18n="Kembalikan Tulisan ke Bawaan" id="settingsResetBrandBtn" type="button">Kembalikan Tulisan ke Bawaan</button>
+<div class="settings-section-title">🎨 <span data-i18n="Warna Tampilan Website">Warna Tampilan Website</span>
+</div>
+<div class="theme-color-grid" id="themeColorGrid">
+<label class="theme-color-row" data-var="cream">
+<span class="tcr-swatch" id="swatch-cream" style="background:#F6ECDA"></span>
+<span class="tcr-info">
+<span class="tcr-label" data-i18n="Warna Latar Belakang">Warna Latar Belakang</span>
+<span class="tcr-hex" id="hex-cream">#F6ECDA</span>
+</span>
+<input id="color-cream" type="color" value="#F6ECDA"/>
+</label>
+<label class="theme-color-row" data-var="paper">
+<span class="tcr-swatch" id="swatch-paper" style="background:#FFFBF3"></span>
+<span class="tcr-info">
+<span class="tcr-label" data-i18n="Warna Kartu / Kotak Konten">Warna Kartu / Kotak Konten</span>
+<span class="tcr-hex" id="hex-paper">#FFFBF3</span>
+</span>
+<input id="color-paper" type="color" value="#FFFBF3"/>
+</label>
+<label class="theme-color-row" data-var="espresso">
+<span class="tcr-swatch" id="swatch-espresso" style="background:#2B1B12"></span>
+<span class="tcr-info">
+<span class="tcr-label" data-i18n="Warna Font / Teks Utama">Warna Font / Teks Utama</span>
+<span class="tcr-hex" id="hex-espresso">#2B1B12</span>
+</span>
+<input id="color-espresso" type="color" value="#2B1B12"/>
+</label>
+<label class="theme-color-row" data-var="amber">
+<span class="tcr-swatch" id="swatch-amber" style="background:#C17A3E"></span>
+<span class="tcr-info">
+<span class="tcr-label" data-i18n="Warna Aksen Utama (tombol, sorotan)">Warna Aksen Utama (tombol,
+                sorotan)</span>
+<span class="tcr-hex" id="hex-amber">#C17A3E</span>
+</span>
+<input id="color-amber" type="color" value="#C17A3E"/>
+</label>
+<label class="theme-color-row" data-var="cherry">
+<span class="tcr-swatch" id="swatch-cherry" style="background:#9C2B3D"></span>
+<span class="tcr-info">
+<span class="tcr-label" data-i18n="Warna Aksen Kedua (harga, badge)">Warna Aksen Kedua (harga,
+                badge)</span>
+<span class="tcr-hex" id="hex-cherry">#9C2B3D</span>
+</span>
+<input id="color-cherry" type="color" value="#9C2B3D"/>
+</label>
+<label class="theme-color-row" data-var="espresso2">
+<span class="tcr-swatch" id="swatch-espresso2" style="background:#4A3324"></span>
+<span class="tcr-info">
+<span class="tcr-label" data-i18n="Warna Font Sekunder / Judul">Warna Font Sekunder / Judul</span>
+<span class="tcr-hex" id="hex-espresso2">#4A3324</span>
+</span>
+<input id="color-espresso2" type="color" value="#4A3324"/>
+</label>
+<label class="theme-color-row" data-var="amberLight">
+<span class="tcr-swatch" id="swatch-amberLight" style="background:#E7C393"></span>
+<span class="tcr-info">
+<span class="tcr-label" data-i18n="Warna Aksen Muda (highlight terang)">Warna Aksen Muda (highlight
+                terang)</span>
+<span class="tcr-hex" id="hex-amberLight">#E7C393</span>
+</span>
+<input id="color-amberLight" type="color" value="#E7C393"/>
+</label>
+<label class="theme-color-row" data-var="sage">
+<span class="tcr-swatch" id="swatch-sage" style="background:#6E7B58"></span>
+<span class="tcr-info">
+<span class="tcr-label" data-i18n="Warna Aksen Hijau (status berhasil)">Warna Aksen Hijau (status
+                berhasil)</span>
+<span class="tcr-hex" id="hex-sage">#6E7B58</span>
+</span>
+<input id="color-sage" type="color" value="#6E7B58"/>
+</label>
+<label class="theme-color-row" data-var="line">
+<span class="tcr-swatch" id="swatch-line" style="background:#E6D6B8"></span>
+<span class="tcr-info">
+<span class="tcr-label" data-i18n="Warna Garis / Pembatas">Warna Garis / Pembatas</span>
+<span class="tcr-hex" id="hex-line">#E6D6B8</span>
+</span>
+<input id="color-line" type="color" value="#E6D6B8"/>
+</label>
+<label class="theme-color-row" data-var="muted">
+<span class="tcr-swatch" id="swatch-muted" style="background:#8A7A63"></span>
+<span class="tcr-info">
+<span class="tcr-label" data-i18n="Warna Teks Redup / Keterangan">Warna Teks Redup / Keterangan</span>
+<span class="tcr-hex" id="hex-muted">#8A7A63</span>
+</span>
+<input id="color-muted" type="color" value="#8A7A63"/>
+</label>
+</div>
+<button class="settings-media-reset-btn" data-i18n="Kembalikan ke Warna Bawaan" id="settingsResetThemeBtn" style="width:100%; margin-top:12px;" type="button">Kembalikan ke Warna
+          Bawaan</button>
+</div>
+</div>
+<!-- ===== GERBANG ID KASIR UNTUK MASUK PENGATURAN ===== -->
+<div class="kasir-login-overlay" hidden="" id="viewSettingsLogin">
+<div class="kasir-login-box">
+<div class="klb-top">
+<span class="klb-title" data-i18n="Masuk ke Pengaturan">Masuk ke Pengaturan</span>
+<button class="klb-close" id="backFromSettingsLogin" type="button">✕</button>
+</div>
+<div class="field" id="fieldSettingsId">
+<label><span data-i18n="ID Kasir">ID Kasir</span> <span class="req">*</span></label>
+<input data-i18n-placeholder="ID Kasir" id="settingsIdInput" inputmode="numeric" placeholder="ID Kasir" type="password"/>
+<span class="err" data-i18n="ID Kasir salah, coba lagi">ID Kasir salah, coba lagi</span>
+</div>
+<button class="again-btn" data-i18n="Masuk" id="settingsLoginBtn" style="width:100%">Masuk</button>
+</div>
+</div>
+<!-- ===== GERBANG LOGIN KASIR ===== -->
+<div class="kasir-login-overlay" hidden="" id="viewKasirLogin">
+<div class="kasir-login-box">
+<div class="klb-top">
+<span class="klb-title" data-i18n="Masuk sebagai Kasir">Masuk sebagai Kasir</span>
+<button class="klb-close" id="backFromKasirLogin" type="button">✕</button>
+</div>
+<div class="field" id="fieldKasirName">
+<label><span data-i18n="Nama Kasir">Nama Kasir</span></label>
+<input data-i18n-placeholder="Nama kasir" id="kasirNameInput" placeholder="Nama kasir" type="text"/>
+<span class="err" data-i18n="Nama kasir wajib diisi">Nama kasir wajib diisi</span>
+</div>
+<div class="field" id="fieldKasirPass">
+<label><span data-i18n="Sandi Kasir">Sandi Kasir</span></label>
+<div class="pw-wrap">
+<input data-i18n-placeholder="Sandi" id="kasirPassInput" placeholder="Sandi" type="password"/>
+<button aria-label="Tampilkan sandi" class="pw-toggle" id="kasirPassToggle" type="button">
+<svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+</button>
+</div>
+<span class="err" data-i18n="Sandi salah, coba lagi" id="kasirPassErr">Sandi salah, coba lagi</span>
+</div>
+<button class="again-btn" data-i18n="Masuk ke Kasir" id="kasirLoginBtn" style="width:100%; margin-top:14px;">Masuk ke
+          Kasir</button>
+</div>
+</div>
+<!-- ===== HALAMAN KASIR ===== -->
+<div class="view-page" hidden="" id="viewKasir">
+<div class="page-top">
+<button id="backFromKasir">←</button>
+<h3 data-i18n="Halaman Kasir">Halaman Kasir</h3>
+<button data-i18n="Keluar" id="kasirLogoutBtn" style="margin-left:auto; font-size:12px; color:var(--cherry); background:none; border:none; cursor:pointer;">Keluar</button>
+</div>
+<div class="page-body kasir-page-body">
+<div class="kasir-sidebar">
+<div class="kasir-subtabs">
+<button class="kasir-subtab active" data-i18n="Pesanan Masuk" id="kasirTabOrders" type="button">Pesanan
+              Masuk</button>
+<button class="kasir-subtab" data-i18n="Kelola Menu" id="kasirTabMenu" type="button">Kelola Menu</button>
+<button class="kasir-subtab" data-i18n="Uang Masuk" id="kasirTabKas" type="button">Uang Masuk</button>
+<button class="kasir-subtab" data-i18n="QR Pesanan" id="openScanBtn" type="button">QR Pesanan</button>
+</div>
+</div>
+<div class="kasir-main">
+<div id="kasirOrdersPane">
+<div hidden="" id="kasirPaymentVerifySection">
+<div class="section-label" data-i18n="Verifikasi Pembayaran Online">Verifikasi Pembayaran Online</div>
+<div class="kasir-hint" data-i18n="Cek dulu di aplikasi DANA/e-wallet kasir apakah dana sudah benar-benar masuk, baru tekan Konfirmasi. Pesanan TIDAK masuk dapur sebelum dikonfirmasi di sini.">
+              Cek dulu di aplikasi DANA/e-wallet kasir apakah dana sudah benar-benar masuk, baru tekan Konfirmasi.
+              Pesanan TIDAK masuk dapur sebelum dikonfirmasi di sini.</div>
+<div id="kasirPaymentVerifyBody"></div>
+</div>
+<div id="kasirOrdersBody"></div>
+</div>
+<div hidden="" id="kasirMenuPane">
+<div class="kasir-cat-manage" id="kasirCatManage"></div>
+<button class="kasir-add-menu-btn" data-i18n="+ Tambah Menu Baru" id="kasirAddMenuToggle" type="button">+
+            Tambah Menu Baru</button>
+<div class="kasir-add-form" hidden="" id="kasirAddForm">
+<label data-i18n="Kategori">Kategori</label>
+<select id="kasirAddCat"></select>
+<label data-i18n="Nama Menu">Nama Menu</label>
+<input data-i18n-placeholder="Contoh: Kopi Susu Vanila" id="kasirAddName" placeholder="Contoh: Kopi Susu Vanila" type="text"/>
+<label data-i18n="Harga (Rp)">Harga (Rp)</label>
+<input id="kasirAddPrice" inputmode="numeric" min="0" placeholder="10000" step="500" type="number"/>
+<label data-i18n="Deskripsi (opsional)">Deskripsi (opsional)</label>
+<input data-i18n-placeholder="Deskripsi singkat menu" id="kasirAddDesc" placeholder="Deskripsi singkat menu" type="text"/>
+<label data-i18n="Foto Menu (opsional)">Foto Menu (opsional)</label>
+<input accept="image/*" id="kasirAddImg" type="file"/>
+<div class="kasir-add-form-actions">
+<button class="kasir-add-cancel" data-i18n="Batal" id="kasirAddCancelBtn" type="button">Batal</button>
+<button class="kasir-add-submit" data-i18n="Simpan Menu" id="kasirAddSubmitBtn" type="button">Simpan
+                Menu</button>
+</div>
+</div>
+<input class="kasir-menu-search" data-i18n-placeholder="Cari nama menu..." id="kasirMenuSearch" placeholder="Cari nama menu..." type="text"/>
+<div id="kasirMenuBody"></div>
+</div>
+<div hidden="" id="kasirKasPane">
+<div class="kas-summary">
+<div class="kas-summary-row">
+<span data-i18n="Uang Masuk (Hari Ini)">Uang Masuk (Hari Ini)</span>
+<b id="kasMasukTotal">Rp0</b>
+</div>
+<div class="kas-summary-row">
+<span data-i18n="Uang Keluar (Hari Ini)">Uang Keluar (Hari Ini)</span>
+<b id="kasKeluarTotal">Rp0</b>
+</div>
+<div class="kas-summary-row kas-summary-saldo">
+<span data-i18n="Sisa Kas">Sisa Kas</span>
+<b id="kasSaldoTotal">Rp0</b>
+</div>
+</div>
+<div class="kas-expense-form">
+<input data-i18n-placeholder="Keterangan uang keluar (mis. Beli gas, belanja stok)" id="kasExpenseDesc" placeholder="Keterangan uang keluar (mis. Beli gas, belanja stok)" type="text"/>
+<input id="kasExpenseAmount" inputmode="numeric" min="0" placeholder="Jumlah (Rp)" step="500" type="number"/>
+<button data-i18n="+ Catat Uang Keluar" id="kasExpenseAddBtn" type="button">+ Catat Uang Keluar</button>
+</div>
+<div id="kasExpenseList"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- ===== RIWAYAT PESANAN ===== -->
+<div class="view-page" hidden="" id="viewOrderHistory">
+<div class="page-top">
+<button id="backFromHistory">←</button>
+<h3 data-i18n="Riwayat Pesanan">Riwayat Pesanan</h3>
+</div>
+<div class="page-body" id="orderHistoryBody"></div>
+</div>
+<!-- ===== BAHASA ===== -->
+<div class="view-page" hidden="" id="viewLanguage">
+<div class="page-top">
+<button id="backFromLanguage">←</button>
+<h3 data-i18n="Bahasa">Bahasa</h3>
+</div>
+<div class="page-body" id="languageBody"></div>
+</div>
+<!-- ===== BANTUAN ===== -->
+<div class="view-page" hidden="" id="viewHelp">
+<div class="page-top">
+<button id="backFromHelp">←</button>
+<h3 data-i18n="Bantuan">Bantuan</h3>
+</div>
+<div class="page-body">
+<div class="help-faq">
+<div class="faq-item">
+<div class="faq-q" data-i18n="Bagaimana cara mengubah nomor meja?">Bagaimana cara mengubah nomor meja?</div>
+<div class="faq-a" data-i18n="Tap nomor meja di halaman menu untuk mengubahnya. Nomor di halaman pembayaran otomatis mengikuti.">
+              Tap nomor meja di halaman menu untuk mengubahnya. Nomor di halaman pembayaran otomatis mengikuti.</div>
+</div>
+<div class="faq-item">
+<div class="faq-q" data-i18n="Metode pembayaran apa saja yang tersedia?">Metode pembayaran apa saja yang
+              tersedia?</div>
+<div class="faq-a" data-i18n="Kamu bisa bayar online lewat QRIS, atau bayar langsung di kasir warung.">Kamu
+              bisa bayar online lewat QRIS, atau bayar langsung di kasir warung.</div>
+</div>
+<div class="faq-item">
+<div class="faq-q" data-i18n="Bagaimana cara melihat pesanan sebelumnya?">Bagaimana cara melihat pesanan
+              sebelumnya?</div>
+<div class="faq-a" data-i18n='Buka menu ☰ di pojok kanan atas, lalu pilih "Riwayat Pesanan".'>Buka menu ☰ di
+              pojok kanan atas, lalu pilih "Riwayat Pesanan".</div>
+</div>
+<div class="faq-item">
+<div class="faq-q" data-i18n="Bisa pesan lebih dari 1 meja sekaligus?">Bisa pesan lebih dari 1 meja
+              sekaligus?</div>
+<div class="faq-a" data-i18n="Untuk saat ini satu sesi hanya untuk satu nomor meja. Hubungi staf kami kalau butuh bantuan lebih lanjut.">
+              Untuk saat ini satu sesi hanya untuk satu nomor meja. Hubungi staf kami kalau butuh bantuan lebih lanjut.
+            </div>
+</div>
+</div>
+<a class="wa-btn" href="#" id="helpWaBtn" rel="noopener" target="_blank">
+<span class="wa-ic">🟢</span> <span data-i18n="Hubungi Kami via WhatsApp">Hubungi Kami via WhatsApp</span>
+</a>
+</div>
+</div>
+<!-- ===== JAM OPERASIONAL ===== -->
+<div class="view-page" hidden="" id="viewHours">
+<div class="page-top">
+<button id="backFromHours">←</button>
+<h3 data-i18n="Jam Operasional">Jam Operasional</h3>
+</div>
+<div class="page-body">
+<div id="hoursBody"></div>
+<!-- Hanya tampak kalau sedang login sebagai Kasir. Kalau belum/tidak login
+           kasir, blok ini otomatis tersembunyi (lihat syncHoursKasirEditVisibility()
+           di JS) — pembeli biasa sama sekali tidak melihat atau bisa mengaksesnya. -->
+<div hidden="" id="hoursKasirEditPane">
+<div class="settings-section-title">🔐 <span data-i18n="Atur Jam Operasional (Kasir)">Atur Jam Operasional
+              (Kasir)</span></div>
+<div class="kasir-hours-status-card">
+<div>
+<div class="khs-label" data-i18n="Status warung saat ini">Status warung saat ini</div>
+<div class="khs-value" id="kasirShopStatusText">Buka</div>
+</div>
+<button class="kasir-toggle-open-btn" id="kasirToggleOpenBtn" type="button">Tutup Warung</button>
+</div>
+<label class="kasir-auto-toggle-row" style="display:flex;align-items:center;gap:8px;margin:10px 0;font-size:14px;">
+<input checked="" id="kasirAutoScheduleToggle" type="checkbox"/>
+<span data-i18n="Buka/tutup otomatis sesuai jam operasional">Buka/tutup otomatis sesuai jam
+              operasional</span>
+</label>
+<div class="kasir-add-form">
+<label data-i18n="Jam Buka">Jam Buka</label>
+<input id="kasirOpenTimeInput" type="time"/>
+<label data-i18n="Jam Tutup">Jam Tutup</label>
+<input id="kasirCloseTimeInput" type="time"/>
+<button class="kasir-save-hours-btn" data-i18n="Simpan Jam Operasional" id="kasirSaveHoursBtn" type="button">Simpan Jam Operasional</button>
+</div>
+</div>
+</div>
+</div>
+<!-- ===== ITEM SHEET ===== -->
+<div class="sheet-overlay" hidden="" id="itemOverlay">
+<div class="sheet" id="itemSheet"></div>
+</div>
+<!-- ===== PHOTO VIEWER (ketuk 2x pada foto menu — lihat bentuk asli menu secara utuh) ===== -->
+<div class="photo-view-overlay" hidden="" id="photoViewOverlay">
+<button class="pv-close" id="photoViewClose" type="button">✕</button>
+<img alt="" id="photoViewImg" src=""/>
+<div class="pv-name" id="photoViewName"></div>
+</div>
+<!-- ===== CHECKOUT VIEW ===== -->
+<div class="view-page" hidden="" id="viewCheckout">
+<div class="page-top">
+<button id="backFromCheckout">←</button>
+<h3 data-i18n="Pembayaran">Pembayaran</h3>
+</div>
+<div class="page-body">
+<div class="order-type">
+<button class="active" data-i18n="Makan di Tempat" data-type="Makan di Tempat" id="typeDineIn">Makan di
+            Tempat</button>
+<button data-i18n="Bawa Pulang" data-type="Bawa Pulang" id="typeTakeAway">Bawa Pulang</button>
+</div>
+<h3 data-i18n="Data Pemesan" style="font-family:'Fraunces',serif; font-size:15px; margin:0 0 14px;">Data Pemesan
+        </h3>
+<div class="field" id="fieldName">
+<label><span data-i18n="Nama Lengkap">Nama Lengkap</span> <span class="req">*</span></label>
+<input data-i18n-placeholder="Nama lengkap" id="inputName" placeholder="Nama lengkap" type="text"/>
+<span class="err" data-i18n="Nama wajib diisi">Nama wajib diisi</span>
+</div>
+<div class="field" id="fieldPhone">
+<label data-i18n="Nomor HP (WhatsApp)">Nomor HP (WhatsApp)</label>
+<input id="inputPhone" placeholder="08xx xxxx xxxx" type="text"/>
+<span class="err" data-i18n="Nomor HP harus diawali 08 atau 62">Nomor HP harus diawali 08 atau 62</span>
+</div>
+<div class="field" id="fieldEmail">
+<label data-i18n="Kirim Struk ke Email">Kirim Struk ke Email</label>
+<input id="inputEmail" placeholder="nama@gmail.com" type="text"/>
+<span class="err" data-i18n="Email harus menggunakan @gmail.com">Email harus menggunakan @gmail.com</span>
+</div>
+<div class="field">
+<label><span data-i18n="Nomor Meja">Nomor Meja</span> <span class="req">*</span></label>
+<input id="inputTable" readonly="" type="text" value="06"/>
+</div>
+<div class="related-menu-block">
+<div class="related-menu-title" data-i18n="Menu yang Dipesan">Menu yang Dipesan</div>
+<div class="related-menu-scroll" id="relatedMenuScroll"></div>
+</div>
+<div class="order-from">
+<span data-i18n="Kamu memesan dari">Kamu memesan dari</span>
+<b>Warkop Senja</b>
+</div>
+<div id="summaryLines"></div>
+<div class="section-label" data-i18n="Metode Pembayaran">Metode Pembayaran</div>
+<div class="payment-method">
+<button class="pm-option active" id="pmOnline" type="button">
+<span class="pm-badge pm-badge-online"><span class="pm-icon">💳</span><span class="pm-check">✓</span></span>
+<span class="pm-text" data-i18n="Bayar Online">Bayar Online</span>
+</button>
+<button class="pm-option" id="pmCashier" type="button">
+<span class="pm-badge pm-badge-cash"><span class="pm-icon">💵</span><span class="pm-check">✓</span></span>
+<span class="pm-text" data-i18n="Bayar di Kasir">Bayar di Kasir</span>
+</button>
+</div>
+<div id="completePayment">
+<div class="section-label-row">
+<div class="section-label" data-i18n="Selesaikan Pembayaran">Selesaikan Pembayaran</div>
+<button class="pending-cash-link" data-i18n="Ada QR yang belum selesai?" hidden="" id="pendingCashLink" type="button">Ada QR yang belum selesai?</button>
+</div>
+<div class="pay-panel">
+<div class="qris-row">
+<span class="qris-icon">▦</span>
+<span class="qris-label">QRIS</span>
+<span class="radio-dot"></span>
+</div>
+<label class="agree-row">
+<input id="agreeTerms" type="checkbox"/>
+<span><span data-i18n="Saya setuju dengan">Saya setuju dengan</span> <a data-i18n="Syarat &amp; Ketentuan" href="#" onclick="return false;">Syarat &amp; Ketentuan</a> <span data-i18n="dan">dan</span> <a data-i18n="Kebijakan Privasi" href="#" onclick="return false;">Kebijakan Privasi</a>.</span>
+</label>
+</div>
+</div>
+</div>
+<div class="pay-footer">
+<div class="pay-footer-top">
+<div class="amt-block">
+<small data-i18n="Total Bayar">Total Bayar</small>
+<b id="payTotal">Rp0</b>
+</div>
+<button class="pay-btn" data-i18n="Bayar Sekarang" id="payBtn">Bayar Sekarang</button>
+</div>
+<div class="promo-row" id="promoRow">🎟 <span data-i18n="Tambah Promo / Voucher">Tambah Promo / Voucher</span>
+</div>
+</div>
+</div>
+<!-- ===== HALAMAN QRIS ===== -->
+<div class="view-page" hidden="" id="viewQris">
+<div class="page-top">
+<button id="backFromQris">←</button>
+<h3 data-i18n="Bayar dengan QRIS">Bayar dengan QRIS</h3>
+</div>
+<div class="page-body">
+<div class="qris-card">
+<img alt="QRIS Warung Senja" class="qris-img" src="images/img-001.jpg"/>
+<div class="qris-amount">
+<span data-i18n="Total Bayar">Total Bayar</span>
+<b id="qrisAmount">Rp0</b>
+</div>
+<a class="qris-save-btn" download="QRIS-KopiSenja.jpg" id="qrisSaveBtn">
+            ⬇ <span data-i18n="Simpan QRIS">Simpan QRIS</span>
+</a>
+</div>
+<div class="qris-timer-box" id="qrisTimerBox">
+<span data-i18n="Bayar sebelum">Bayar sebelum</span>
+<b id="qrisCountdown">05:00</b>
+</div>
+<div class="qris-expired" hidden="" id="qrisExpired">
+<p data-i18n="QRIS sudah kedaluwarsa. Perbarui untuk melanjutkan.">QRIS sudah kedaluwarsa. Perbarui untuk
+            melanjutkan.</p>
+<button data-i18n="Perbarui QRIS" id="qrisRefreshBtn">Perbarui QRIS</button>
+</div>
+</div>
+<div class="pay-footer">
+<div class="qris-waiting" hidden="" id="qrisWaiting">
+<span class="qris-waiting-dot"></span>
+<span data-i18n="Menunggu verifikasi kasir... pesanan baru masuk dapur setelah kasir mengonfirmasi pembayaran diterima">Menunggu
+            verifikasi kasir... pesanan baru masuk dapur setelah kasir mengonfirmasi pembayaran diterima</span>
+</div>
+</div>
+</div>
+<!-- ===== SUCCESS VIEW ===== -->
+<div class="view-page" hidden="" id="viewSuccess">
+<div class="success-body">
+<button aria-label="Tutup" class="success-close-btn" id="closeSuccessBtn" type="button">✕</button>
+<div class="success-icon" hidden="" id="successIcon">✓</div>
+<h2 data-i18n="Pesanan Diterima" hidden="" id="successTitle">Pesanan Diterima</h2>
+<p data-i18n="Terima kasih! Kopi dan camilanmu sedang diseduh &amp; disiapkan barista. Ambil nomor antrianmu di meja." hidden="" id="successDesc">Terima kasih! Kopi dan camilanmu sedang diseduh &amp; disiapkan barista. Ambil nomor antrianmu di meja.
+        </p>
+<div class="queue"><small data-i18n="NOMOR ANTRIAN">NOMOR ANTRIAN</small><span id="queueNo">A-01</span></div>
+<div class="order-qr-box">
+<button class="order-qr-cancel-btn" data-i18n="Hapus" id="cancelPendingOrderBtn" type="button">Hapus</button>
+<div class="order-qr-top-row">
+<div class="order-qr-label" data-i18n="TUNJUKKAN QR INI KE KASIR">TUNJUKKAN QR INI KE KASIR</div>
+</div>
+<div id="orderQrCode"></div>
+<div class="order-qr-code-text" id="orderQrCodeText"></div>
+<div class="order-qr-summary" id="orderQrSummary"></div>
+</div>
+<div class="qris-waiting" hidden="" id="scanWaitingBadge">
+<span class="qris-waiting-dot"></span>
+<span data-i18n="Menunggu di-scan kasir... halaman ini otomatis lanjut begitu di-scan">Menunggu di-scan
+            kasir... halaman ini otomatis lanjut begitu di-scan</span>
+</div>
+<p class="wa-hint" hidden="" id="sentToKasirHint">Kode ini berisi rincian pesanan &amp; totalnya. Simpan halaman
+          ini — kode tidak akan hilang sampai kasir men-scan dan menerima pesananmu.</p>
+</div>
+</div>
+<!-- ===== SCAN QR PESANAN (dibuka dari Halaman Kasir) ===== -->
+<div class="scan-overlay" hidden="" id="scanOverlay">
+<div class="scan-box">
+<div class="klb-top">
+<span class="klb-title" data-i18n="QR Pesanan">QR Pesanan</span>
+<button aria-label="Tutup" class="klb-close" id="closeScanBtn">✕</button>
+</div>
+<div id="scanReader"></div>
+<div class="scan-cam-controls" hidden="" id="scanCamControls">
+<button class="scan-cam-btn" hidden="" id="toggleTorchBtn" type="button">🔦 <span data-i18n="Senter">Senter</span></button>
+<button class="scan-cam-btn" hidden="" id="switchCamBtn" type="button">🔄 <span data-i18n="Ganti Kamera">Ganti
+              Kamera</span></button>
+</div>
+<div class="scan-manual-label" data-i18n="Kamera tidak jalan? Ketik kode/nomor antrian pesanan:">Kamera tidak
+          jalan? Ketik kode/nomor antrian pesanan:</div>
+<div class="scan-manual-row">
+<input id="scanManualInput" placeholder="cth. A-01 / ord_xxxx" type="text"/>
+<button data-i18n="Cari" id="scanManualBtn" type="button">Cari</button>
+</div>
+<div class="scan-fallback-note" data-i18n="Kode ini unik untuk tiap pesanan — pesanan berbeda pasti menghasilkan QR &amp; kode yang berbeda pula.">
+          Kode ini unik untuk tiap pesanan — pesanan berbeda pasti menghasilkan QR &amp; kode yang berbeda pula.</div>
+</div>
+</div>
+<div class="toast" id="toast"></div>
+<!-- ===== KONFIRMASI KELUAR ===== -->
+<div class="exit-overlay" hidden="" id="exitConfirm">
+<div class="exit-box">
+<div class="exit-emoji">☕</div>
+<h3 data-i18n="Yakin ingin keluar dari Kopi Senja?">Yakin ingin keluar dari Kopi Senja?</h3>
+<p data-i18n="Keranjang dan datamu tetap tersimpan kalau kamu kembali lagi.">Keranjang dan datamu tetap
+          tersimpan kalau kamu kembali lagi.</p>
+<div class="exit-actions">
+<button data-i18n="Batal" id="exitCancelBtn">Batal</button>
+<button class="danger" data-i18n="Ya, Keluar" id="exitConfirmBtn">Ya, Keluar</button>
+</div>
+</div>
+</div>
+</div>
+
+<script src="script.js"></script></body>
+</html>
