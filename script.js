@@ -5369,6 +5369,19 @@ async function init() {
   // secara lokal tanpa perlu menunggu jaringan sama sekali. Sekarang menu tampil
   // SEKETIKA dengan data bawaan, lalu digambar ULANG begitu override kasir (kalau ada)
   // datang dari Firebase/localStorage.
+  try {
+    const ls = (k) => localStorage.getItem(LS_PREFIX + k);
+    const v = ls('heroIconVisible');
+    if (v === '0' || v === '1') heroIconVisible = v === '1';
+    if (ls('heroIconType')) heroIconType = ls('heroIconType');
+    if (ls('heroIconData')) heroIconData = ls('heroIconData');
+    if (ls('heroMediaType')) heroMediaType = ls('heroMediaType');
+    if (ls('heroMediaData')) heroMediaData = ls('heroMediaData');
+    if (ls('heroMediaStyle')) heroMediaStyle = { ...DEFAULT_HERO_TRANSFORM, ...JSON.parse(ls('heroMediaStyle')) };
+    if (ls('brandStyle')) brandStyle = { ...DEFAULT_BRAND, ...JSON.parse(ls('brandStyle')) };
+    if (ls('themeColors')) themeColors = { ...DEFAULT_THEME, ...JSON.parse(ls('themeColors')) };
+  } catch (e) { }
+  
   renderInfoCardStatus();
   renderHeroMedia();
   renderHeroIcon();
